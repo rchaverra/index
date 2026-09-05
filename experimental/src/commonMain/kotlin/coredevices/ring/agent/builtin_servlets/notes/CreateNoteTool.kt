@@ -51,7 +51,7 @@ class CreateNoteTool(private val noteIntegrationFactory: NoteIntegrationFactory)
 
     companion object {
         const val TOOL_NAME = "create_note"
-        const val TOOL_DESCRIPTION = "Save a note, idea, or thought for later. Use when the user wants to jot down or note something, or remember a fact or piece of information. Not for 'remember to do something' requests - those are reminders."
+        const val TOOL_DESCRIPTION = "Save a standalone note, idea, thought, or fact when the user does not name a destination list or named note. If the user asks to add, send, or save content to a named list or named note, use create_list_item instead. Not for 'remember to do something' requests - those are reminders."
         private val logger = Logger.withTag("CreateNoteTool")
     }
 

@@ -3,6 +3,7 @@
 package coredevices.ring.agent.builtin_servlets.reminders
 
 import coredevices.ring.agent.builtin_servlets.reminders.ListTool.Companion.matchListIdByHint
+import coredevices.ring.agent.builtin_servlets.reminders.ListTool.Companion.destinationHintForRequest
 import coredevices.ring.data.entity.room.indexfeed.CachedList
 import coredevices.ring.service.indexfeed.DefaultListsBootstrap.Companion.LIST_NOTES_SELF_ID
 import coredevices.ring.service.indexfeed.DefaultListsBootstrap.Companion.LIST_SHOPPING_ID
@@ -69,6 +70,52 @@ class ListToolMatchListIdByHintTest {
     fun userCreatedGroceriesListWinsOverSynonymForSingularHint() {
         val lists = seededLists + CachedList(firestoreId = "custom", title = "Groceries", seed = null)
         assertEquals("custom", matchListIdByHint(lists, "grocery"))
+    }
+
+    @Test
+    fun exactCustomNoteTitleAndBuiltInDestinationsRemainResolvable() {
+        val lists = seededLists + CachedList(firestoreId = "today-note", title = "Today note")
+        assertEquals("today-note", matchListIdByHint(lists, "Today note"))
+        assertEquals(LIST_NOTES_SELF_ID, matchListIdByHint(lists, "Notes to self"))
+        assertEquals(LIST_TODOS_ID, matchListIdByHint(lists, "Reminders"))
+        assertEquals(LIST_SHOPPING_ID, matchListIdByHint(lists, "Shopping"))
+    }
+
+    @Test
+    fun explicitCustomTitleInTranscriptOverridesIncorrectModelHint() {
+        val lists = seededLists + CachedList(firestoreId = "today-note", title = "Today note")
+        assertEquals(
+            "Today note",
+            destinationHintForRequest(
+                lists,
+                modelHint = "shopping",
+                userMessage = "Add something to my Today Note: Today is not raining.",
+            ),
+        )
+    }
+
+    @Test
+    fun reminderWordingOverridesIncorrectShoppingHint() {
+        assertEquals(
+            "todo",
+            destinationHintForRequest(
+                seededLists,
+                modelHint = "shopping",
+                userMessage = "Remind me to call the bank",
+            ),
+        )
+    }
+
+    @Test
+    fun modelHintRemainsFallbackWhenTranscriptHasNoDestinationEvidence() {
+        assertEquals(
+            "work",
+            destinationHintForRequest(
+                seededLists,
+                modelHint = "work",
+                userMessage = "Add the quarterly report",
+            ),
+        )
     }
 
     @Test

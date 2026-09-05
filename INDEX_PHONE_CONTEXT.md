@@ -575,16 +575,26 @@ These are observed defects/requirements, not diagnoses unless explicitly stated.
 
 ### 17.1 Named user-created note/list voice routing
 
-Observed:
+**Status: IMPLEMENTED AND PHYSICALLY VALIDATED, WITH ONE LOCAL-MODEL ARTIFACT**
 
-- a user-created list titled **Today note** exists and can be used manually;
-- the exact request `Add something to my Today note. Today is not raining.` routed to Notes to self.
+The existing `create_list_item` tool now preserves custom destination names and resolves the
+destination against the original transcript when the local model supplies a conflicting hint.
+Explicit local list titles win, reminder wording resolves to Reminders, shopping/grocery wording
+resolves to Shopping, and ambiguous requests retain the model-provided hint. The recording,
+transcription, and agent message-construction pipeline remains unchanged.
 
-Example intent:
+Physical validation on the Pixel Fold routed these recordings correctly:
 
-`Add <item> to my Work/Urgent list`
+- `Add something to my Today note. Today is not raining.` -> **Today note**
+- `Add bread to my shopping list.` -> **Shopping list**
+- `Remind me to call the bank.` -> **Reminders**
+- `The weather is nice today.` -> **Notes to self**
 
-Named-list voice routing remains unimplemented/defective and requires a separate investigation of local-agent tool selection and list lookup. It is not validated by the Phase 1/2A/2B checkpoint.
+The Today-note recording also produced a second item, `tomato`, despite that word not appearing in
+the transcript. Two successful action chips were shown for the recording, indicating an additional
+local-model tool call rather than a destination-resolution or transcription failure. Treat this as
+an unresolved local-model multiple-tool-call artifact. Do not modify the protected AI pipeline as
+part of destination routing.
 
 ### 17.2 Alarm/device-association dependency
 
@@ -647,7 +657,7 @@ If a required state cannot be implemented reliably under Android/OEM constraints
 
 Keep each issue separate:
 
-1. named user-created note/list voice routing
+1. local-model duplicate or hallucinated tool-call artifact observed after named-list routing
 2. alarm/device-association dependency
 3. Android navigation insets
 4. phone-mode Local LLM / Local-only speech defaults
@@ -757,7 +767,7 @@ Update this context with observed merge hotspots.
 | Existing gesture settings | Drive phone-button destination behavior where supported |
 | Upstream update | Fork-specific changes remain localized |
 
-The local model and Local-only speech settings used in physical testing were selected manually. Automatic phone-mode defaults remain unimplemented. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, named-list routing, alarm behavior, Android inset handling, and Volume Up behavior remain unvalidated.
+The local model and Local-only speech settings used in physical testing were selected manually. Automatic phone-mode defaults remain unimplemented. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, the duplicate local-model tool-call artifact, alarm behavior, Android inset handling, and Volume Up behavior remain unvalidated.
 
 ---
 
@@ -851,7 +861,7 @@ Current validated implementation:
 
 Current known defects/requirements:
 
-- named user-created note/list voice routing
+- local-model duplicate or hallucinated tool-call artifact after otherwise-correct named-list routing
 - alarm/device-association dependency
 - Android 3-button navigation inset overlap
 - Local LLM / Local-only speech defaults not yet implemented

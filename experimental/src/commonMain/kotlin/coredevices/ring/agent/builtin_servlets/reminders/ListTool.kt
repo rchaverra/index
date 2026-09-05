@@ -40,8 +40,8 @@ class ListTool: BuiltInMcpTool(
                     "list_name" to JsonObject(
                         mapOf(
                             "type" to "string",
-                            "description" to "The name of the list to add the item to e.g. 'shopping', 'todo'. " +
-                                    "Use a short search term keyword, e.g. 'shopping' instead of 'my shopping list' to improve matching with existing lists."
+                            "description" to "The existing destination list name as spoken by the user, e.g. 'Today note', 'shopping', or 'Reminders'. " +
+                                    "Keep custom names intact; remove only surrounding words such as 'my' or 'list'."
                         ).toJson()
                     ),
                     "message" to JsonObject(
@@ -73,7 +73,7 @@ class ListTool: BuiltInMcpTool(
 
     companion object Companion {
         const val TOOL_NAME = "create_list_item"
-        const val TOOL_DESCRIPTION = "Add an item to a shopping list, grocery list, or to-do list. Use when the user names a list or wants to buy groceries, food, or household supplies."
+        const val TOOL_DESCRIPTION = "Add an item or note to an explicitly named existing list, including a custom list or named note. Also use for shopping or grocery list requests. Put only the destination name in list_name and only the content to save in message. For a generic 'remind me' or 'remember to' request that does not name a list, use create_reminder instead."
         private val logger = Logger.withTag(ReminderTool::class.simpleName!!)
 
         /**
@@ -93,6 +93,43 @@ class ListTool: BuiltInMcpTool(
                     } else null
                 }
         }
+
+        /**
+         * Corrects a model-provided destination using only explicit evidence in the original
+         * request. This stays inside list-tool execution: it does not alter transcription or
+         * agent selection, and the model hint remains the fallback when the request is ambiguous.
+         */
+        fun destinationHintForRequest(
+            lists: List<CachedList>,
+            modelHint: String,
+            userMessage: String?,
+        ): String {
+            val request = normalizeForPhraseMatch(userMessage.orEmpty())
+            if (request.isEmpty()) return modelHint
+
+            lists.asSequence()
+                .filter { it.title.isNotBlank() }
+                .sortedByDescending { normalizeForPhraseMatch(it.title).length }
+                .firstOrNull { request.containsWholePhrase(normalizeForPhraseMatch(it.title)) }
+                ?.let { return it.title }
+
+            return when {
+                request.containsWholePhrase("remind me") ||
+                        request.containsWholePhrase("remember to") -> "todo"
+                request.containsWholePhrase("shopping") ||
+                        request.containsWholePhrase("grocery") ||
+                        request.containsWholePhrase("groceries") -> "shopping"
+                else -> modelHint
+            }
+        }
+
+        private fun normalizeForPhraseMatch(value: String): String = value
+            .lowercase()
+            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+            .trim()
+
+        private fun String.containsWholePhrase(phrase: String): Boolean =
+            phrase.isNotEmpty() && " $this ".contains(" $phrase ")
 
         // Spoken names that don't literally match a seeded list title.
         private val hintSynonyms = listOf(
@@ -207,14 +244,21 @@ class ListTool: BuiltInMcpTool(
 
         return try {
             val integration = reminderIntegrationFactory.createReminderIntegration()
-            val list = integration.searchForList(listItemArgs.list_name).firstOrNull()
+            val lists = runCatching { listRepo.getAllFlow().first() }.getOrDefault(emptyList())
+            val userMessage = runCatching { context.userMessageText.await() }.getOrNull()
+            val destinationHint = destinationHintForRequest(
+                lists = lists,
+                modelHint = listItemArgs.list_name,
+                userMessage = userMessage,
+            )
+            val list = integration.searchForList(destinationHint).firstOrNull()
             val reminderId = integration.createReminder(
                 listItemArgs.message,
                 instant,
                 listId = list?.id,
                 source = context.itemSource(),
             )
-            val resolvedListId = runCatching { resolveListIdByHint(listItemArgs.list_name) }.getOrNull()
+            val resolvedListId = matchListIdByHint(lists, destinationHint)
             ToolCallResult(
                 JsonSnake.encodeToString(ListAddResult(success = true, id = reminderId)),
                 SemanticResult.ListItemCreation(
@@ -238,6 +282,4 @@ class ListTool: BuiltInMcpTool(
         }
     }
 
-    private suspend fun resolveListIdByHint(hint: String): String? =
-        matchListIdByHint(listRepo.getAllFlow().first(), hint)
 }
