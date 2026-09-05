@@ -12,8 +12,11 @@ import co.touchlab.kermit.Logger
 import com.russhwolf.settings.Settings
 import coredevices.coreapp.ui.navigation.AppNavHost
 import coredevices.coreapp.ui.screens.SHOWN_ONBOARDING
+import coredevices.pebble.ui.PebbleNavBarRoutes
 import coredevices.pebble.ui.PebbleRoutes
 import coredevices.ui.dismissKeyboardOnTapOutside
+import coredevices.util.Platform
+import coredevices.util.isAndroid
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import theme.AppTheme
@@ -34,7 +37,10 @@ fun App() {
     }
     AppTheme {
         val settings: Settings = koinInject()
-        val startDestination = if (settings.getBoolean(SHOWN_ONBOARDING, false)) {
+        val platform: Platform = koinInject()
+        val startDestination = if (platform.isAndroid) {
+            PebbleNavBarRoutes.IndexRoute
+        } else if (settings.getBoolean(SHOWN_ONBOARDING, false)) {
             PebbleRoutes.WatchHomeRoute
         } else {
             CommonRoutes.OnboardingRoute

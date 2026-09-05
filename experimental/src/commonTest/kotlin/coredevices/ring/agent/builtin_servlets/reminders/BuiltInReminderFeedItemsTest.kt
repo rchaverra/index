@@ -50,6 +50,7 @@ class BuiltInReminderFeedItemsTest {
     }
 
     private class FakeCachedListDao(val lists: List<CachedList>) : CachedListDao {
+        override suspend fun insertIfMissing(lists: List<CachedList>) = error("unused")
         override suspend fun upsert(list: CachedList) = error("unused")
         override suspend fun upsertAll(lists: List<CachedList>) = error("unused")
         override suspend fun getById(id: String): CachedList? = lists.firstOrNull { it.firestoreId == id }

@@ -32,9 +32,13 @@ import coredevices.ring.transcription.AndroidInferenceBoostProvider
 import coredevices.ring.transcription.InferenceBoostProvider
 import coredevices.util.transcription.CactusModelPathProvider
 import coredevices.util.transcription.InferenceBoost
+import io.rebble.libpebblecommon.plugin.PhoneNetworkMonitor
 import org.koin.dsl.module
 
 actual val platformRingModule = module {
+    // The libpebble3 monitor lives in its isolated Koin context; expose the
+    // same existing monitor to the application graph for bootstrap retries.
+    single { PhoneNetworkMonitor(get()) }
     single<InferenceBoostProvider> { AndroidInferenceBoostProvider(get()) } bind InferenceBoost::class
     single<CactusModelPathProvider> { CactusModelProvider() }
     singleOf(::RingDelegate)

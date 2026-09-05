@@ -28,10 +28,13 @@ import coredevices.coreapp.ui.screens.ringonboarding.RingOnboardingScreen
 import coredevices.coreapp.ui.screens.ViewBugReportScreen
 import coredevices.coreapp.ui.screens.WatchOnboardingScreen
 import coredevices.pebble.PebbleDeepLinkHandler
+import coredevices.pebble.ui.PebbleNavBarRoutes
 import coredevices.pebble.ui.PebbleRoutes
+import coredevices.pebble.ui.TopBarParams
 import coredevices.pebble.ui.addPebbleRoutes
 import coredevices.ui.GenericWebViewScreen
 import coredevices.util.CommonBuildKonfig
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -196,6 +199,18 @@ fun AppNavHost(navController: NavHostController, startDestination: Any) {
                     coreNav = coreNav,
                 )
             }
+        }
+        composable<PebbleNavBarRoutes.IndexRoute> {
+            val topBarParams = TopBarParams(
+                searchAvailable = { },
+                actions = { },
+                title = { },
+                overrideGoBack = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) },
+                showSnackbar = { },
+                scrollToTop = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) },
+                setHidden = { },
+            )
+            experimentalDevices.IndexScreen(coreNav, topBarParams)
         }
     }
 }

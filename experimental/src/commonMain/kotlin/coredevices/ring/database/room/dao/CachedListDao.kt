@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CachedListDao {
+    /** Bootstrap only: a conflicting row (including a tombstone) always wins. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfMissing(lists: List<CachedList>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(list: CachedList)
 

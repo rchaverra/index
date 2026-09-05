@@ -3,6 +3,9 @@
 package coredevices.ring.service.indexfeed
 
 import co.touchlab.kermit.Logger
+import coredevices.util.Platform
+import coredevices.util.isAndroid
+import kotlinx.coroutines.CancellationException
 import coredevices.indexai.data.entity.ItemDocument
 import coredevices.indexai.data.entity.ListDocument
 import coredevices.ring.data.entity.room.indexfeed.CachedItem
@@ -83,6 +86,7 @@ class IndexFeedSyncService(
     private val documentEncryptor: DocumentEncryptor,
     private val encryptionManager: EncryptionManager,
     private val scope: RecordingBackgroundScope,
+    private val platform: Platform,
 ) {
     private val log = Logger.withTag("IndexFeedSync")
 
@@ -192,8 +196,8 @@ class IndexFeedSyncService(
         if (Firebase.auth.currentUser == null) return
         if (itemRepo.countLocked() == 0 && listRepo.countLocked() == 0) return
         log.i { "Key available — re-pulling to unlock encrypted items/lists" }
-        try { pullItems(firestoreItemsDao.getAll()) } catch (e: Exception) { log.w(e) { "re-decrypt pull items failed" } }
-        try { pullLists(firestoreListsDao.getAll()) } catch (e: Exception) { log.w(e) { "re-decrypt pull lists failed" } }
+        try { pullItems(firestoreItemsDao.getAll()) } catch (e: CancellationException) { throw e } catch (e: Exception) { log.w(e) { "re-decrypt pull items failed" } }
+        try { pullLists(firestoreListsDao.getAll()) } catch (e: CancellationException) { throw e } catch (e: Exception) { log.w(e) { "re-decrypt pull lists failed" } }
     }
 
     /**
@@ -208,10 +212,10 @@ class IndexFeedSyncService(
             log.w { "syncNow: skipped (not authenticated)" }
             return
         }
-        try { pullItems(firestoreItemsDao.getAll()) } catch (e: Exception) { log.w(e) { "syncNow: pull items failed" } }
-        try { pullLists(firestoreListsDao.getAll()) } catch (e: Exception) { log.w(e) { "syncNow: pull lists failed" } }
-        try { pushItems(itemRepo.getAllForSyncFlow().first()) } catch (e: Exception) { log.w(e) { "syncNow: push items failed" } }
-        try { pushLists(listRepo.getAllForSyncFlow().first()) } catch (e: Exception) { log.w(e) { "syncNow: push lists failed" } }
+        try { pullItems(firestoreItemsDao.getAll()) } catch (e: CancellationException) { throw e } catch (e: Exception) { log.w(e) { "syncNow: pull items failed" } }
+        try { pullLists(firestoreListsDao.getAll()) } catch (e: CancellationException) { throw e } catch (e: Exception) { log.w(e) { "syncNow: pull lists failed" } }
+        try { pushItems(itemRepo.getAllForSyncFlow().first()) } catch (e: CancellationException) { throw e } catch (e: Exception) { log.w(e) { "syncNow: push items failed" } }
+        try { pushLists(listRepo.getAllForSyncFlow().first()) } catch (e: CancellationException) { throw e } catch (e: Exception) { log.w(e) { "syncNow: push lists failed" } }
     }
 
     // ── push (Room → Firestore) ─────────────────────────────────────────
@@ -235,12 +239,16 @@ class IndexFeedSyncService(
             })
             mutex.withLock { toPush.forEach { itemLastApplied[it.firestoreId] = it.updatedAt } }
             log.i { "pushed ${toPush.size} items" }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.w(e) { "pushItems failed (${toPush.size} items kept locally)" }
         }
     }
 
     private suspend fun pushLists(lists: List<CachedList>) {
+        val uid = Firebase.auth.currentUser?.uid
+        if (platform.isAndroid && (uid == null || !preferences.backupEnabled.value)) return
         val toPush = mutex.withLock {
             lists.filter {
                 if (it.locked && !it.deleted) return@filter false
@@ -250,16 +258,27 @@ class IndexFeedSyncService(
         if (toPush.isEmpty()) return
         val key = encryptionKeyOrNull()
         try {
-            firestoreListsDao.writeBatch(toPush.map {
-                val doc = it.toDocument()
-                // Seed lists (Notes to self, Todos, Shopping) have generic,
-                // non-sensitive titles and are bootstrapped locally — leave
-                // them cleartext so they stay readable on a keyless device.
-                val out = if (key != null && doc.seed == null) documentEncryptor.encryptList(doc, key) else doc
-                it.firestoreId to out
-            })
-            mutex.withLock { toPush.forEach { listLastApplied[it.firestoreId] = it.updatedAt } }
+            val uploaded = uploadListDocuments(
+                lists = toPush,
+                android = platform.isAndroid,
+                createIfAbsent = { id, doc ->
+                    if (preferences.backupEnabled.value && Firebase.auth.currentUser?.uid == uid) {
+                        firestoreListsDao.createListIfAbsent(requireNotNull(uid), id, doc)
+                    } else false
+                },
+                writeBatch = { ordinary ->
+                    firestoreListsDao.writeBatch(ordinary.map {
+                        val doc = it.toDocument()
+                        // System lists remain cleartext, as in the existing upload path.
+                        val out = if (key != null && doc.seed == null) documentEncryptor.encryptList(doc, key) else doc
+                        it.firestoreId to out
+                    })
+                },
+            )
+            mutex.withLock { uploaded.forEach { listLastApplied[it.firestoreId] = it.updatedAt } }
             log.i { "pushed ${toPush.size} lists" }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.w(e) { "pushLists failed (${toPush.size} lists kept locally)" }
         }
@@ -385,4 +404,24 @@ class IndexFeedSyncService(
             remote to true
         }
     }
+}
+
+/** Both automatic and manual sync use this upload boundary, even when no pull succeeded. */
+internal suspend fun uploadListDocuments(
+    lists: List<CachedList>,
+    android: Boolean,
+    createIfAbsent: suspend (String, ListDocument) -> Boolean,
+    writeBatch: suspend (List<CachedList>) -> Unit,
+): List<CachedList> {
+    val (placeholders, ordinary) = lists.partition { android && DefaultListsBootstrap.isPristinePlaceholder(it) }
+    for (placeholder in placeholders) {
+        // Do not mark a placeholder as applied or promote it locally. In particular, an
+        // existing remote document must still arrive through pull; a failed create can retry.
+        val now = kotlin.time.Clock.System.now()
+        deferDefaultListFailure {
+            createIfAbsent(placeholder.firestoreId, placeholder.toDocument().copy(createdAt = now, updatedAt = now))
+        }
+    }
+    if (ordinary.isNotEmpty()) writeBatch(ordinary)
+    return ordinary
 }

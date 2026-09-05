@@ -84,11 +84,15 @@ import coredevices.ring.ui.components.chat.IndexComposeBarHost
 import coredevices.ring.ui.navigation.RingRoutes
 import coredevices.ring.ui.theme.IndexTheme
 import coredevices.ring.ui.viewmodel.IndexFeedViewModel
+import coredevices.util.Permission
+import coredevices.util.PermissionRequester
+import coredevices.util.rememberUiContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -114,6 +118,25 @@ fun IndexFeedScreen(
     val colors = IndexTheme.colors
     val lifecycleOwner = LocalLifecycleOwner.current
     val listState = remember { androidx.compose.foundation.lazy.LazyListState() }
+
+    val permissionRequester = koinInject<PermissionRequester>()
+    val uiContext = rememberUiContext()
+    val missingPermissions by permissionRequester.missingPermissions.collectAsStateWithLifecycle()
+
+    LaunchedEffect(missingPermissions, uiContext) {
+        val context = uiContext ?: return@LaunchedEffect
+        // PHASE 2B: Proactively request permissions required for the phone-mode Index
+        // experience (notifications and alarms for reminders) since onboarding is bypassed.
+        // Microphone remains on-demand via IndexComposeBarHost.
+        val phoneModePermissions = setOf(
+            Permission.PostNotifications,
+            Permission.SetAlarms
+        )
+        val toRequest = missingPermissions.firstOrNull { it in phoneModePermissions }
+        if (toRequest != null) {
+            permissionRequester.requestPermission(toRequest, context)
+        }
+    }
 
     // Re-tap of the bottom-nav Index tab fires `scrollToTop` — bring
     // the home back to the top + close any open search. Initial scroll

@@ -21,6 +21,7 @@ import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import io.rebble.libpebblecommon.plugin.PhoneNetworkMonitor
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -33,6 +34,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
 
 actual val platformRingModule = module {
+    singleOf(::PhoneNetworkMonitor)
     single<CactusModelPathProvider> { CactusModelProvider() }
     singleOf(::RingDelegate)
     factoryOf(::AudioRecorder)

@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
+import co.touchlab.kermit.Logger
 import com.eygraber.uri.Uri
 import com.mmk.kmpnotifier.notification.NotifierManager
 import coredevices.indexai.database.dao.ConversationMessageDao
@@ -35,11 +36,16 @@ import coredevices.ring.ui.navigation.addRingRoutes
 import coredevices.ring.ui.screens.home.FeedTabContents
 import coredevices.ring.ui.screens.home.IndexFeedScreen
 import coredevices.ring.ui.theme.IndexThemeHost
+import coredevices.util.CoreConfigHolder
 import coredevices.util.Permission
 import coredevices.util.PermissionRequester
+import coredevices.util.Platform
+import coredevices.util.isAndroid
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
-import dev.gitlive.firebase.auth.FirebaseUser
+import coredevices.ring.service.indexfeed.observeDefaultListsBootstrap
+import io.rebble.libpebblecommon.plugin.PhoneNetworkMonitor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -79,9 +85,20 @@ class ExperimentalDevices(
     private val indexFeedSyncService: coredevices.ring.service.indexfeed.IndexFeedSyncService,
     private val defaultListsBootstrap: coredevices.ring.service.indexfeed.DefaultListsBootstrap,
     private val indexSettingsSummary: IndexSettingsSummary,
+    private val coreConfigHolder: CoreConfigHolder,
+    private val platform: Platform,
+    private val phoneNetworkMonitor: PhoneNetworkMonitor,
 ) {
     private val scope = CoroutineScope(Dispatchers.Default)
     fun appInit() {
+        if (platform.isAndroid) {
+            // PHASE 2B: Force Index to be enabled in Android phone mode so that
+            // required permissions are included in the missing-permissions set
+            // and Index features are active by default.
+            if (!coreConfigHolder.config.value.enableIndex) {
+                coreConfigHolder.update(coreConfigHolder.config.value.copy(enableIndex = true))
+            }
+        }
         libIndex.init(
             permissionRequester.missingPermissions.distinctUntilChanged { old, new ->
                 (Permission.Bluetooth in old && Permission.Bluetooth !in new) || (Permission.Bluetooth !in old && Permission.Bluetooth in new)
@@ -90,25 +107,35 @@ class ExperimentalDevices(
             }
         )
         indexFeedSyncService.hashCode()
-        // Self-healing: creates the three system seed lists in Firestore
-        // (Notes-to-self / Todos / Shopping) if any are missing. Idempotent.
-        // Runs after each auth event because [DefaultListsBootstrap] reads
-        // its own auth state internally; we kick once at app start and
-        // again whenever auth changes via the snapshot listener flow.
-        scope.launch {
-            flow {
-                emit(Firebase.auth.currentUser)
-                Firebase.auth.authStateChanged.collect { emit(it) }
-            }.distinctUntilChanged { old: FirebaseUser?, new: FirebaseUser? ->
-                old?.uid == new?.uid
-            }.collect { user ->
-                if (user != null) {
-                    try { defaultListsBootstrap.ensure() } catch (e: Exception) {
-                        co.touchlab.kermit.Logger.withTag("ExperimentalDevices")
-                            .w(e) { "DefaultListsBootstrap.ensure() failed" }
-                    }
-                }
+
+        // Android local seeds never wait for the independent cloud observer.
+        if (platform.isAndroid) scope.launch {
+            try { defaultListsBootstrap.ensureLocal() } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logger.withTag("ExperimentalDevices").w(e) { "Local default list initialization failed" }
             }
+        }
+
+        scope.launch {
+            observeDefaultListsBootstrap(
+                accounts = flow {
+                    emit(Firebase.auth.currentUser?.uid)
+                    Firebase.auth.authStateChanged.collect { emit(it?.uid) }
+                },
+                backupEnabled = preferences.backupEnabled,
+                android = platform.isAndroid,
+                connectivityAvailable = phoneNetworkMonitor.connection.map { route ->
+                    route != null && route != "None"
+                },
+                reconcile = {
+                    try { defaultListsBootstrap.ensure() } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Logger.withTag("ExperimentalDevices").w(e) { "Cloud default list initialization deferred" }
+                    }
+                },
+            )
         }
     }
 

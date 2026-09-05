@@ -52,6 +52,11 @@ class ListRepository(
         setList(id, updated)
     }
 
+    /** Atomically ignore existing IDs; never use ordinary upserts for local defaults. */
+    suspend fun insertIfMissing(lists: List<Pair<String, ListDocument>>) {
+        cacheDao.insertIfMissing(lists.map { (id, doc) -> CachedList.fromDocument(id, doc) })
+    }
+
     suspend fun writeBatch(lists: List<Pair<String, ListDocument>>) {
         cacheDao.upsertAll(lists.map { (id, doc) -> CachedList.fromDocument(id, doc) })
     }
