@@ -830,6 +830,22 @@ Rehearse a clean merge/rebase from current upstream and measure:
 
 Update this context with observed merge hotspots.
 
+#### Rehearsal result against upstream `f853c91b` — 2026-09-06
+
+Remote references were refreshed before testing. Upstream had advanced by 10 commits from the
+fork's previous `4addc6d9` base, while the phone branch had four commits beyond that common base.
+The upstream and fork file-change sets did not overlap in this update. `git merge-tree` produced a
+clean merged tree with zero textual conflicts. A detached temporary worktree then merged
+`upstream/master` into `b58aa308` with `--no-commit`; the automatic merge was clean and the exact
+combined tree passed `:androidApp:assembleDebug`. The temporary checkout was removed afterward and
+the real `index-phone-phase-1` branch remained unchanged.
+
+This update therefore has low immediate merge risk. The highest future sensitivity remains in the
+fork's existing shared Index files (`ExperimentalDevices`, list tools/repositories, navigation, and
+Index feed UI), but none was touched by these 10 upstream commits. Most Volume Up behavior remains
+localized in new Android adapter files. Applying this upstream revision is a separate mutation from
+the completed rehearsal and requires its own checkpoint decision.
+
 ---
 
 ## 19. Acceptance-test matrix
@@ -964,6 +980,7 @@ Current validated implementation:
 - Volume Up Hold recording bridge — physically validated through existing local processing from Home and the awake locked screen
 - full existing gesture routing — physically validated on the awake folded Pixel Fold; stored settings change phone behavior without rebuilding
 - Android 3-button navigation inset correction — physically validated on the folded Pixel Fold
+- upstream merge rehearsal through `f853c91b` — zero conflicts and combined Android debug build passed
 
 Current known defects/requirements:
 
@@ -980,9 +997,9 @@ Current known defects/requirements:
 
 Before changing additional product behavior:
 
-1. Review and checkpoint the validated Android gesture bridge and reminder correction.
-2. Rehearse an upstream merge and measure the remaining shared-file conflict surface.
+1. Decide whether to merge validated upstream `f853c91b` into `index-phone-phase-1` now.
+2. Implement and validate automatic Local LLM and Local-only speech defaults for Android phone mode.
 3. Preserve the documented Pixel screen-off limitation and validate the Motorola Razr+ 2024 when available.
-4. Keep the remaining issues separate: unauthenticated recording upload noise, duplicate local-model tool-call artifact, phone-only alarm path, and phone-mode local defaults.
+4. Keep the remaining issues separate: unauthenticated recording upload noise, duplicate local-model tool-call artifact, and the phone-only alarm path.
 
 The product requirements in Section 1 remain unchanged unless the user explicitly changes them.
