@@ -12,6 +12,8 @@ import androidx.lifecycle.lifecycleScope
 import co.touchlab.kermit.Logger
 import com.eygraber.uri.toKmpUriOrNull
 import coredevices.ExperimentalDevices
+import coredevices.coreapp.indexphone.IndexPhoneAppVisibility
+import coredevices.coreapp.indexphone.IndexPhoneRecordingService
 import coredevices.coreapp.ui.App
 import coredevices.coreapp.ui.navigation.CoreDeepLinkHandler
 import coredevices.pebble.PebbleAndroidDelegate
@@ -82,9 +84,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        IndexPhoneAppVisibility.isForeground = true
+        IndexPhoneRecordingService.armIfPermitted(this)
         pebbleAppDelegate.onAppResumed()
         // Retry the background service start in case it failed while backgrounded (e.g. no CDM exemption).
         pebbleBackgroundManager.retryStartIfNeeded()
+    }
+
+    override fun onPause() {
+        IndexPhoneAppVisibility.isForeground = false
+        super.onPause()
     }
 
     override fun onDestroy() {

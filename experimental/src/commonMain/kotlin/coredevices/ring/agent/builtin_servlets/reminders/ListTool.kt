@@ -115,7 +115,9 @@ class ListTool: BuiltInMcpTool(
 
             return when {
                 request.containsWholePhrase("remind me") ||
-                        request.containsWholePhrase("remember to") -> "todo"
+                        request.containsWholePhrase("remember to") ||
+                        request.containsWholePhrase("reminder") ||
+                        request.containsWholePhrase("reminders") -> "todo"
                 request.containsWholePhrase("shopping") ||
                         request.containsWholePhrase("grocery") ||
                         request.containsWholePhrase("groceries") -> "shopping"

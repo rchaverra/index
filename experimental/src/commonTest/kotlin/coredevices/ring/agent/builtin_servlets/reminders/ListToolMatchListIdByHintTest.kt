@@ -96,12 +96,32 @@ class ListToolMatchListIdByHintTest {
 
     @Test
     fun reminderWordingOverridesIncorrectShoppingHint() {
+        listOf(
+            "Remind me to call the bank",
+            "A reminder, I need to go pick up Illiana's mark.",
+            "And a reminder, I need to go pick up my niece tomorrow.",
+            "Add a reminder, add",
+        ).forEach { request ->
+            assertEquals(
+                "todo",
+                destinationHintForRequest(
+                    seededLists,
+                    modelHint = "shopping",
+                    userMessage = request,
+                ),
+                request,
+            )
+        }
+    }
+
+    @Test
+    fun explicitNamedListStillWinsWhenSavedContentMentionsReminder() {
         assertEquals(
-            "todo",
+            "Shopping list",
             destinationHintForRequest(
                 seededLists,
                 modelHint = "shopping",
-                userMessage = "Remind me to call the bank",
+                userMessage = "Add birthday reminder cards to my Shopping list",
             ),
         )
     }

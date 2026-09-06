@@ -611,11 +611,11 @@ Do not assume the correct fix is to pair/fake a Pebble or Ring. Investigate the 
 
 ### 17.3 Android navigation-bar insets
 
-Observed:
-
-- bottom Index UI overlaps the Android native 3-button navigation area on the test device
-
-Likely area to inspect is system-inset handling around the direct Index root route, but do not implement a guessed fix before inspecting the current layout/inset behavior.
+The Index feed root previously handled status-bar and keyboard insets but omitted the bottom
+navigation-bar inset, so the compose bar overlapped Android's three-button controls. Applying the
+standard `navigationBarsPadding()` modifier to that root keeps the bottom input above the native
+controls without a fixed device-specific distance. The rebuilt APK was physically verified on the
+folded Pixel Fold in three-button navigation mode on 2026-09-06; the overlap is resolved.
 
 ---
 
@@ -653,6 +653,28 @@ Investigate relevant Android mechanisms and their user-visible/security/accessib
 
 If a required state cannot be implemented reliably under Android/OEM constraints, document the exact limitation rather than claiming success.
 
+#### Pixel Fold event-delivery result — 2026-09-05
+
+An event-only Android accessibility-service probe was built and installed without connecting it to recording, gesture routing, transcription, or the agent. The service requested filtered key events, logged only physical Volume Up down/up timing and phone state, and returned `false` so Android retained normal volume handling.
+
+Physical testing used a Google Pixel Fold on SDK 37 in the folded/closed posture with the usable outer display. The inner-display posture was intentionally excluded because that display is broken and is not part of the intended use of this test phone.
+
+| Tested state | Physical Volume Up down/up delivered to probe |
+|---|---|
+| Index foreground, screen on and unlocked | Yes |
+| Home screen, Index backgrounded | Yes |
+| Android Settings foreground, Index backgrounded | Yes |
+| Awake lock screen | Yes |
+| Screen on with active media playback | Yes |
+| Screen off/dozing with media idle | No |
+| Screen off/dozing with active media playback | No |
+
+The passing cases delivered one down event and one up event. A held press did not generate repeat events on this device, but the shared `downTime` and the elapsed time between down and up were sufficient to distinguish a short press from a hold. The screen-off failures were observed while the accessibility service remained enabled; active media did not restore delivery, the display remained dozing, and playback continued.
+
+This proves that the public accessibility key-filter path can support the required gesture input while the tested Pixel Fold is awake, including when locked or another app is foregrounded. It does not support the requirement while that device's screen is fully off. An activity listener remains insufficient for global behavior. A media-session volume provider does not expose the complete physical down/release stream required for `hold -> record -> release -> stop` and would alter normal media-volume ownership, so it is not an equivalent replacement.
+
+The Motorola Razr+ 2024 remains an intended target, but no physical result should be claimed until that device is available. OEM behavior may differ. The product requirement remains unchanged; implementation should explicitly target the device states proven feasible and retain a documented screen-off limitation where Android/OEM input policy prevents delivery.
+
 ### Milestone C — Stabilize remaining Index phone behavior
 
 Keep each issue separate:
@@ -688,6 +710,22 @@ Acceptance:
 - no Compose dependency
 - no recording/audio dependency in the pure gesture detector
 
+#### Folded Pixel Fold gesture result — 2026-09-05
+
+The event-only Android probe now feeds a pure, common-code timing detector that emits the existing `RingGesture` vocabulary plus a hold-release signal for future recording stop behavior. Default timing is a 600 ms hold threshold and a 600 ms inter-click boundary. The Android adapter gives a pending click timer 200 ms of delivery allowance while continuing to classify the sequence from physical key-event timestamps; this prevents accessibility delivery latency from finalizing a click before an already-occurred next press reaches the service.
+
+Focused Android host tests cover Click, DoubleClick, TripleClick, Hold, ClickHold, exact timing boundaries, hold release, repeated down events, sequence separation, and an up event without a preceding down. The full Android debug build passes.
+
+Physical logging on the folded Pixel Fold validated:
+
+- one short press -> `Click`
+- two rapid short presses -> `DoubleClick`
+- three rapid short presses -> `TripleClick`
+- one held press -> `Hold`, followed by matching hold release
+- one short press followed by a held second press -> `ClickHold`, followed by matching hold release
+
+The physical ClickHold validation used a 125 ms gap between the first release and second down. Earlier attempts with 544 ms and 848 ms gaps correctly demonstrated the configured boundary behavior while tuning the adapter against accessibility delivery delay. Gesture output remains log-only at this milestone. It does not invoke recording, transcription, the agent, list routing, or gesture destinations, and the accessibility service continues returning `false` so Android retains normal volume handling.
+
 ### Milestone E — Android Volume Up capture layer
 
 After feasibility is established, implement the smallest supported Android capture mechanism.
@@ -706,6 +744,42 @@ Acceptance:
 - existing transcription/agent behavior remains unchanged
 - works in every device state proven feasible by the capture milestone
 
+#### Folded Pixel Fold hold-to-record result — 2026-09-05
+
+The Android adapter now arms a dedicated microphone foreground service from the resumed activity
+after Record Audio permission has been granted. The accessibility service sends only an existing
+recording-gesture start/release pair to that already-running service. Capture uses the existing
+`AudioRecorder`, writes through `RecordingStorage`, and calls
+`RecordingProcessingQueue.queueLocalAudioProcessing` with the recognized gesture's existing button
+sequence (`long` for Hold, `short long` for ClickHold). No
+recording preprocessing, transcription, agent, tool, or list-routing implementation was changed.
+
+Physical tests on the folded Pixel Fold validated the complete path from both the Home screen and
+the awake locked screen. In each case Hold was recognized at 600 ms, recording began while Index
+was not foregrounded, release stopped and queued the file, local transcription and the existing
+agent ran, and the processing task completed successfully. The lock-screen capture contained 4.608
+seconds of audio and used the configured Local-only speech engine. A persistent "Index phone
+controls ready" notification indicates that the microphone service is armed.
+
+After the initial recording validation, the accessibility adapter was changed to consume the full
+Volume Up down/up stream whenever the recording service is armed. This prevents media volume from
+increasing during a recording and keeps the stream well-formed as required by Android. If phone
+controls are not armed, the event is passed through and Volume Up behaves normally. The
+already-observed screen-off limitation remains: when the Pixel Fold is
+fully off/dozing, Android does not deliver the Volume Up events to this public accessibility path,
+so recording cannot begin in that state. After process death or reinstall, the user must open Index
+once to re-arm the microphone service; reinstall may also require Accessibility to be enabled again.
+
+Android requires the long-lived microphone foreground service to supply a notification. It is kept
+silent and low priority, but cannot be removed in app code without giving up reliable recording from
+Home and the awake lock screen. On Android 13+, the user may block this notification channel to hide
+it from the drawer, while Android can still show Index in the system Active apps surface.
+
+While unauthenticated, the unchanged downstream pipeline logs failed recording-persistence and
+Firestore-upload attempts after local capture. Those errors did not block local transcription,
+agent execution, or successful task completion in either physical test. They remain a separate
+local-first cleanup concern outside this bridge milestone.
+
 ### Milestone G — Full existing gesture routing
 
 Connect:
@@ -719,6 +793,31 @@ Connect:
 Prefer `GestureRoutingPreferences` and `RingGesture` rather than creating a second settings/routing system.
 
 Changes made in the existing Index gesture settings should affect the phone button where the existing model supports it.
+
+#### Folded Pixel Fold full-routing result — 2026-09-06
+
+The Android accessibility adapter now connects all five recognized gestures without introducing a
+second routing system. Click, DoubleClick, and TripleClick read `GestureRoutingPreferences` when the
+gesture is executed and dispatch the existing PlayPause, NextTrack, or Nothing behavior. Hold and
+ClickHold attach their existing button sequences to the phone recording, after which the unchanged
+`RecordingOperationFactory` resolves IndexAgent, WebSearch, McpSandbox, WebhookOnly, or Nothing from
+the same preferences used by Index hardware. No gesture destination is hard-coded in the phone
+adapter.
+
+Physical testing while another app was foregrounded validated Click -> Nothing, DoubleClick ->
+PlayPause, and TripleClick -> NextTrack. Hold produced a successful `long` local processing task and
+added the spoken item to Shopping. ClickHold produced `short long`. With ClickHold configured for
+WebSearch, its first task reached the existing search route and stopped with the expected signed-out
+"Login required for cloud processing" error: current WebSearch is `SearchAgentNenya`, deliberately
+online-only and authenticated. After changing ClickHold to IndexAgent in Index settings, the next
+ClickHold recording used local transcription and the normal local agent path, proving that the phone
+gesture follows the stored setting without a rebuild.
+
+The reminder regression reported during this milestone was also physically rechecked. Although the
+local model requested `list_name: shopping` for "A reminder: I need to pick up my niece tomorrow,"
+the existing request-aware list resolver selected `list_todos`; the item was stored in Reminders.
+The local speech model transcribed "niece" as "knees," which is a separate transcription-quality
+issue rather than a destination-routing failure.
 
 ### Milestone H — Upstream merge rehearsal
 
@@ -753,21 +852,22 @@ Update this context with observed merge hotspots.
 | Agent Model default | Local LLM — not yet implemented |
 | Speech Engine default | Local only — not yet implemented |
 | Local speech model absent | Existing download mechanism is triggered automatically — not yet implemented |
-| Volume 1x | Existing Click semantics |
-| Volume 2x | Existing DoubleClick semantics |
-| Volume 3x | Existing TripleClick semantics |
-| Volume hold | Existing Hold semantics / recording path |
-| Volume 2x+hold | Existing ClickHold semantics |
-| Index app foreground | Volume gesture works |
-| Other app foreground | Volume gesture works if proven feasible on target Android/device |
-| Home screen | Volume gesture works if proven feasible |
-| Lock screen | Volume gesture works if proven feasible |
-| Screen off | Volume gesture works if proven feasible |
-| Hold recording result | Existing Index processing pipeline |
+| Volume 1x | Click recognition and configured Nothing destination physically validated |
+| Volume 2x | DoubleClick recognition and configured PlayPause destination physically validated |
+| Volume 3x | TripleClick recognition and configured NextTrack destination physically validated |
+| Volume hold | Hold-to-record connected to existing local processing and physically validated |
+| Volume 2x+hold | ClickHold recording and stored-route selection physically validated; WebSearch requires authenticated cloud |
+| Index app foreground | Event delivery and gesture recognition proven on folded Pixel Fold |
+| Other app foreground | All five configured gesture paths physically validated on folded Pixel Fold |
+| Home screen | Hold-to-record and local processing physically validated on folded Pixel Fold |
+| Lock screen | Hold-to-record and local processing physically validated while awake and locked |
+| Screen off | Event delivery failed on folded Pixel Fold, both media-idle and media-playing |
+| Hold recording result | Existing Index processing pipeline used successfully without pipeline changes |
 | Existing gesture settings | Drive phone-button destination behavior where supported |
+| Android 3-button navigation | Bottom Index input remains fully above the native controls; physically validated |
 | Upstream update | Fork-specific changes remain localized |
 
-The local model and Local-only speech settings used in physical testing were selected manually. Automatic phone-mode defaults remain unimplemented. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, the duplicate local-model tool-call artifact, alarm behavior, Android inset handling, and Volume Up behavior remain unvalidated.
+The local model and Local-only speech settings used in physical testing were selected manually. Automatic phone-mode defaults remain unimplemented. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, the duplicate local-model tool-call artifact, and alarm behavior remain unvalidated. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The Motorola Razr+ 2024 remains unvalidated.
 
 ---
 
@@ -858,24 +958,31 @@ Current validated implementation:
 - Phase 2A: local-first default Index lists — complete
 - Phase 2B: Android Index activation and phone-required permission flow — complete
 - Android local-first bootstrap safety/retry and Koin registration repair — complete for the tested paths
+- named-list voice routing — physically validated for a custom list and the three default destinations
+- Volume Up event-only feasibility — complete for the folded Pixel Fold; awake states pass and screen-off states fail
+- Volume Up pure gesture recognition — host-tested and physically validated for all five existing gesture types on the awake folded Pixel Fold
+- Volume Up Hold recording bridge — physically validated through existing local processing from Home and the awake locked screen
+- full existing gesture routing — physically validated on the awake folded Pixel Fold; stored settings change phone behavior without rebuilding
+- Android 3-button navigation inset correction — physically validated on the folded Pixel Fold
 
 Current known defects/requirements:
 
 - local-model duplicate or hallucinated tool-call artifact after otherwise-correct named-list routing
 - alarm/device-association dependency
-- Android 3-button navigation inset overlap
 - Local LLM / Local-only speech defaults not yet implemented
-- global Volume Up feasibility not yet re-audited against the current repository/device
+- WebSearch requires an authenticated cloud account; signed-out routing correctly surfaces login-required
+- unauthenticated recording persistence/upload attempts log errors after successful local processing
+- screen-off Volume Up events are not delivered by the tested public accessibility path on the folded Pixel Fold
+- Motorola Razr+ 2024 Volume Up behavior remains physically untested until that device is available
 - authenticated Firebase synchronization and cloud bootstrap remain physically/emulator unverified
 
 ### Next recommended action
 
 Before changing additional product behavior:
 
-1. Re-audit the **current repository state** against this context.
-2. Perform the separate named-list routing investigation/fix.
-3. Investigate the phone-only alarm path without coupling it to Pebble association.
-4. Perform a **read-only Volume Up feasibility investigation** early because it is the highest-risk requirement.
-5. Do not implement the feasibility result until it has been reviewed and approved.
+1. Review and checkpoint the validated Android gesture bridge and reminder correction.
+2. Rehearse an upstream merge and measure the remaining shared-file conflict surface.
+3. Preserve the documented Pixel screen-off limitation and validate the Motorola Razr+ 2024 when available.
+4. Keep the remaining issues separate: unauthenticated recording upload noise, duplicate local-model tool-call artifact, phone-only alarm path, and phone-mode local defaults.
 
 The product requirements in Section 1 remain unchanged unless the user explicitly changes them.
