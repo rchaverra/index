@@ -118,7 +118,14 @@ actual class ModelDownloadManager(
     }
 
     @RequiresPermission(Manifest.permission.RUN_USER_INITIATED_JOBS)
-    private fun buildJobInfo(modelSlug: String, modelSizeMb: Int, stt: Boolean, networkRequest: NetworkRequest, allowMetered: Boolean): JobInfo {
+    private fun buildJobInfo(
+        modelSlug: String,
+        modelSizeMb: Int,
+        stt: Boolean,
+        networkRequest: NetworkRequest,
+        allowMetered: Boolean,
+        userInitiated: Boolean,
+    ): JobInfo {
         val builder = JobInfo.Builder(slugToJobId(modelSlug), serviceComponentName)
             .setExtras(
                 android.os.PersistableBundle().apply {
@@ -140,7 +147,7 @@ actual class ModelDownloadManager(
                 }
             )
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (userInitiated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             builder.setUserInitiated(true)
         }
         return builder.build()
@@ -152,7 +159,12 @@ actual class ModelDownloadManager(
      * jobs for other models are cancelled first so a hung job can never
      * permanently block a new download.
      */
-    private fun scheduleDownload(modelInfo: ModelInfo, stt: Boolean, allowMetered: Boolean): Boolean {
+    private fun scheduleDownload(
+        modelInfo: ModelInfo,
+        stt: Boolean,
+        allowMetered: Boolean,
+        userInitiated: Boolean = true,
+    ): Boolean {
         val existingJobs = pendingServiceJobs()
         val aliveSameModelJob = existingJobs.firstOrNull {
             it.extras.getString(ModelDownloadService.KEY_MODEL_SLUG) == modelInfo.slug &&
@@ -178,16 +190,37 @@ actual class ModelDownloadManager(
             modelSizeMb = modelInfo.sizeInMB,
             stt = stt,
             networkRequest = buildNetworkRequest(allowMetered),
-            allowMetered = allowMetered
+            allowMetered = allowMetered,
+            userInitiated = userInitiated,
         )
-        return jobScheduler.schedule(info) == JobScheduler.RESULT_SUCCESS
+        val scheduled = jobScheduler.schedule(info) == JobScheduler.RESULT_SUCCESS
+        if (scheduled) {
+            updateDownloadStatus(ModelDownloadStatus.Downloading(modelInfo.slug))
+        }
+        return scheduled
     }
 
-    actual fun downloadSTTModel(modelInfo: ModelInfo, allowMetered: Boolean): Boolean =
-        scheduleDownload(modelInfo, stt = true, allowMetered = allowMetered)
+    actual fun downloadSTTModel(
+        modelInfo: ModelInfo,
+        allowMetered: Boolean,
+        userInitiated: Boolean,
+    ): Boolean = scheduleDownload(
+        modelInfo,
+        stt = true,
+        allowMetered = allowMetered,
+        userInitiated = userInitiated,
+    )
 
-    actual fun downloadLanguageModel(modelInfo: ModelInfo, allowMetered: Boolean): Boolean =
-        scheduleDownload(modelInfo, stt = false, allowMetered = allowMetered)
+    actual fun downloadLanguageModel(
+        modelInfo: ModelInfo,
+        allowMetered: Boolean,
+        userInitiated: Boolean,
+    ): Boolean = scheduleDownload(
+        modelInfo,
+        stt = false,
+        allowMetered = allowMetered,
+        userInitiated = userInitiated,
+    )
 
     actual fun cancelDownload() {
         pendingServiceJobs().forEach { job ->

@@ -111,7 +111,7 @@ class RecordingProcessingQueue(
         // firestoreId-only filter silently dropped.
         val preferences: Preferences = get()
         recordingRepository.getAllRecordings().drop(1).debounce(2000).onEach { recordings ->
-            if (!preferences.backupEnabled.value) return@onEach
+            if (!preferences.backupEnabled.value || Firebase.auth.currentUser == null) return@onEach
             val firestoreRecordingsDao: FirestoreRecordingsDao = get()
             val recordingEntryDao: RecordingEntryDao = get()
             val conversationMessageDao: ConversationMessageDao = get()

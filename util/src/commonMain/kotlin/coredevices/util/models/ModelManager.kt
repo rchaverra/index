@@ -14,12 +14,20 @@ class ModelManager(
 ) {
     val modelDownloadStatus = modelDownloadManager.downloadStatus
 
-    fun downloadSTTModel(modelInfo: ModelInfo, allowMetered: Boolean): Boolean {
-        return modelDownloadManager.downloadSTTModel(modelInfo, allowMetered)
+    fun downloadSTTModel(
+        modelInfo: ModelInfo,
+        allowMetered: Boolean,
+        userInitiated: Boolean = true,
+    ): Boolean {
+        return modelDownloadManager.downloadSTTModel(modelInfo, allowMetered, userInitiated)
     }
 
-    fun downloadLanguageModel(modelInfo: ModelInfo, allowMetered: Boolean): Boolean {
-        return modelDownloadManager.downloadLanguageModel(modelInfo, allowMetered)
+    fun downloadLanguageModel(
+        modelInfo: ModelInfo,
+        allowMetered: Boolean,
+        userInitiated: Boolean = true,
+    ): Boolean {
+        return modelDownloadManager.downloadLanguageModel(modelInfo, allowMetered, userInitiated)
     }
 
     fun cancelDownload() {

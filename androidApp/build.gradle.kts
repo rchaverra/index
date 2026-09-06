@@ -46,7 +46,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "coredevices.coreapp"
+        // Keep the Kotlin namespace stable for low-conflict upstream merges while
+        // giving the Index phone fork its own install identity.
+        applicationId = "com.ricardochaverra.index"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -335,7 +335,11 @@ fun IndexSettings(coreNav: CoreNav) {
                                 )
                             }
                             OutlinedButton(
-                                onClick = { uriHandler.openUrlSafely("https://pbl.zip/index-faq") },
+                                onClick = {
+                                    uriHandler.openUrlSafely(
+                                        "https://github.com/rchaverra/index/blob/index-phone-phase-1/README.md"
+                                    )
+                                },
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = colors.onPrimaryContainer,
                                 ),

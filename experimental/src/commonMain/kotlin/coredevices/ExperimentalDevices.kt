@@ -17,6 +17,7 @@ import androidx.navigation.NavGraphBuilder
 import co.touchlab.kermit.Logger
 import com.eygraber.uri.Uri
 import com.mmk.kmpnotifier.notification.NotifierManager
+import com.russhwolf.settings.Settings
 import coredevices.indexai.database.dao.ConversationMessageDao
 import coredevices.libindex.LibIndex
 import coredevices.libindex.device.IndexPlatformBluetoothAssociations
@@ -25,6 +26,7 @@ import coredevices.ring.bugreport.RecentRecordingExport
 import coredevices.pebble.ui.TopBarParams
 import coredevices.ring.RingDelegate
 import coredevices.ring.agent.ShortcutActionHandler
+import coredevices.ring.agent.LlmMode
 import coredevices.ring.database.Preferences
 import coredevices.ring.database.room.repository.McpSandboxRepository
 import coredevices.ring.database.room.repository.RecordingRepository
@@ -41,6 +43,8 @@ import coredevices.util.Permission
 import coredevices.util.PermissionRequester
 import coredevices.util.Platform
 import coredevices.util.isAndroid
+import coredevices.util.models.CactusSTTMode
+import coredevices.util.models.ModelManager
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import coredevices.ring.service.indexfeed.observeDefaultListsBootstrap
@@ -88,6 +92,8 @@ class ExperimentalDevices(
     private val coreConfigHolder: CoreConfigHolder,
     private val platform: Platform,
     private val phoneNetworkMonitor: PhoneNetworkMonitor,
+    private val settings: Settings,
+    private val modelManager: ModelManager,
 ) {
     private val scope = CoroutineScope(Dispatchers.Default)
     fun appInit() {
@@ -97,6 +103,29 @@ class ExperimentalDevices(
             // and Index features are active by default.
             if (!coreConfigHolder.config.value.enableIndex) {
                 coreConfigHolder.update(coreConfigHolder.config.value.copy(enableIndex = true))
+            }
+            scope.launch {
+                try {
+                    val recommendedModel = modelManager.getRecommendedSTTModel().modelSlug
+                    applyAndroidPhoneModeLocalDefaults(
+                        settings,
+                        preferences,
+                        coreConfigHolder,
+                        recommendedModel,
+                    )
+                    ensureNextAndroidPhoneLocalModel(recommendedModel)
+                    modelManager.modelDownloadStatus.collect { status ->
+                        if (status is coredevices.util.models.ModelDownloadStatus.Idle) {
+                            ensureNextAndroidPhoneLocalModel(recommendedModel)
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Logger.withTag("ExperimentalDevices").w(e) {
+                        "Android phone-mode local defaults initialization deferred"
+                    }
+                }
             }
         }
         libIndex.init(
@@ -136,6 +165,37 @@ class ExperimentalDevices(
                     }
                 },
             )
+        }
+    }
+
+    private suspend fun ensureNextAndroidPhoneLocalModel(recommendedSpeechModel: String) {
+        val downloaded = modelManager.getDownloadedModelSlugs()
+        if (coreConfigHolder.config.value.sttConfig.mode == CactusSTTMode.LocalOnly &&
+            recommendedSpeechModel !in downloaded
+        ) {
+            modelManager.getAvailableSTTModels()
+                .firstOrNull { it.slug == recommendedSpeechModel }
+                ?.let {
+                    modelManager.downloadSTTModel(
+                        it,
+                        allowMetered = true,
+                        userInitiated = false,
+                    )
+                }
+            return
+        }
+
+        val languageModel = modelManager.getRecommendedLanguageModel()
+        if (preferences.llmMode.value == LlmMode.LocalOnly && languageModel !in downloaded) {
+            modelManager.getAvailableLanguageModels()
+                .firstOrNull { it.slug == languageModel }
+                ?.let {
+                    modelManager.downloadLanguageModel(
+                        it,
+                        allowMetered = true,
+                        userInitiated = false,
+                    )
+                }
         }
     }
 
@@ -331,4 +391,33 @@ class ExperimentalDevices(
                 .getOrElse { "\nIndex Settings unavailable: ${it.message}" })
         }
     }
+}
+
+internal const val ANDROID_PHONE_LOCAL_DEFAULTS_INITIALIZED =
+    "android_phone_local_defaults_initialized"
+
+/**
+ * Applies the fork's offline defaults once. The completion marker is written only
+ * after both preferences are stored, so a process interruption safely retries.
+ * Later choices made in Settings are preserved on every subsequent launch.
+ */
+internal suspend fun applyAndroidPhoneModeLocalDefaults(
+    settings: Settings,
+    preferences: Preferences,
+    coreConfigHolder: CoreConfigHolder,
+    recommendedSpeechModel: String,
+) {
+    if (settings.getBoolean(ANDROID_PHONE_LOCAL_DEFAULTS_INITIALIZED, false)) return
+
+    val config = coreConfigHolder.config.value
+    coreConfigHolder.update(
+        config.copy(
+            sttConfig = config.sttConfig.copy(
+                mode = CactusSTTMode.LocalOnly,
+                modelName = recommendedSpeechModel,
+            ),
+        )
+    )
+    preferences.setLlmMode(LlmMode.LocalOnly)
+    settings.putBoolean(ANDROID_PHONE_LOCAL_DEFAULTS_INITIALIZED, true)
 }

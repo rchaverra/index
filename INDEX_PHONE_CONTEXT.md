@@ -865,9 +865,9 @@ the completed rehearsal and requires its own checkpoint decision.
 | Index details/settings | Existing useful Index navigation remains accessible |
 | Generic Pebble bottom nav | Not visible in normal phone mode |
 | Pebble device pages | Not visible in normal phone mode |
-| Agent Model default | Local LLM — not yet implemented |
-| Speech Engine default | Local only — not yet implemented |
-| Local speech model absent | Existing download mechanism is triggered automatically — not yet implemented |
+| Agent Model default | Local LLM — one-time Android phone-mode default physically verified; later user changes remain preserved |
+| Speech Engine default | Local only — one-time Android phone-mode default physically verified; later user changes remain preserved |
+| Local models absent | Speech model downloads automatically, followed by the local agent model; both were physically verified present on the folded Pixel Fold |
 | Volume 1x | Click recognition and configured Nothing destination physically validated |
 | Volume 2x | DoubleClick recognition and configured PlayPause destination physically validated |
 | Volume 3x | TripleClick recognition and configured NextTrack destination physically validated |
@@ -883,7 +883,7 @@ the completed rehearsal and requires its own checkpoint decision.
 | Android 3-button navigation | Bottom Index input remains fully above the native controls; physically validated |
 | Upstream update | Fork-specific changes remain localized |
 
-The local model and Local-only speech settings used in physical testing were selected manually. Automatic phone-mode defaults remain unimplemented. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, the duplicate local-model tool-call artifact, and alarm behavior remain unvalidated. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The Motorola Razr+ 2024 remains unvalidated.
+Automatic Android phone-mode defaults select Local LLM and Local-only speech once, preserve later Settings choices, and sequentially request the speech and local-agent models through the existing Android download manager when absent. Focused host tests and the Android debug build pass; both required models were physically verified on the folded Pixel Fold after automatic scheduling. The Android app is labeled **Index** and uses the independent install ID `com.ricardochaverra.index`, while the internal Kotlin namespace remains stable to reduce upstream conflicts. App-level launcher assets replace the upstream icon without changing shared resources, and the blank Android splash follows the system light/dark appearance. The settings FAQ opens this fork branch's README. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, the duplicate local-model tool-call artifact, and alarm behavior remain unvalidated. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The Motorola Razr+ 2024 remains unvalidated.
 
 ---
 
@@ -986,20 +986,20 @@ Current known defects/requirements:
 
 - local-model duplicate or hallucinated tool-call artifact after otherwise-correct named-list routing
 - alarm/device-association dependency
-- Local LLM / Local-only speech defaults not yet implemented
+- Local LLM / Local-only speech defaults and sequential automatic speech/agent model downloads are implemented, host-tested, and physically verified on the folded Pixel Fold
 - WebSearch requires an authenticated cloud account; signed-out routing correctly surfaces login-required
-- unauthenticated recording persistence/upload attempts log errors after successful local processing
+- recording cloud uploads are gated on both backup enablement and authentication; signed-out local processing remains local
 - screen-off Volume Up events are not delivered by the tested public accessibility path on the folded Pixel Fold
 - Motorola Razr+ 2024 Volume Up behavior remains physically untested until that device is available
 - authenticated Firebase synchronization and cloud bootstrap remain physically/emulator unverified
+- Banco General still rejected the current debug/sideloaded build with Index Accessibility disabled; release signing, Developer Options/debugging, and trusted distribution remain deferred compatibility variables
 
 ### Next recommended action
 
 Before changing additional product behavior:
 
-1. Decide whether to merge validated upstream `f853c91b` into `index-phone-phase-1` now.
-2. Implement and validate automatic Local LLM and Local-only speech defaults for Android phone mode.
-3. Preserve the documented Pixel screen-off limitation and validate the Motorola Razr+ 2024 when available.
-4. Keep the remaining issues separate: unauthenticated recording upload noise, duplicate local-model tool-call artifact, and the phone-only alarm path.
+1. Complete the banking-app compatibility comparison with Index Accessibility disabled, then with Developer Options/debugging disabled if needed.
+2. Preserve the documented Pixel screen-off limitation and validate the Motorola Razr+ 2024 when available.
+3. Keep the remaining issues separate: duplicate local-model tool-call artifact, the phone-only alarm path, and release signing/distribution.
 
 The product requirements in Section 1 remain unchanged unless the user explicitly changes them.

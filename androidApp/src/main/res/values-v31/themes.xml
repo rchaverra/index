@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Index" parent="Theme.Index.Base">
+        <item name="android:windowSplashScreenBackground">@color/index_splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/index_splash_blank</item>
+    </style>
+</resources>

@@ -5,8 +5,16 @@ import kotlinx.coroutines.flow.StateFlow
 
 expect class ModelDownloadManager {
     val downloadStatus: StateFlow<ModelDownloadStatus>
-    fun downloadSTTModel(modelInfo: ModelInfo, allowMetered: Boolean): Boolean
-    fun downloadLanguageModel(modelInfo: ModelInfo, allowMetered: Boolean): Boolean
+    fun downloadSTTModel(
+        modelInfo: ModelInfo,
+        allowMetered: Boolean,
+        userInitiated: Boolean,
+    ): Boolean
+    fun downloadLanguageModel(
+        modelInfo: ModelInfo,
+        allowMetered: Boolean,
+        userInitiated: Boolean = true,
+    ): Boolean
     fun cancelDownload()
 }
 

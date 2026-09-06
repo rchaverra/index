@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Pebble</string>
+    <string name="app_name">Index</string>
     <string name="intent_filter_notion_login">Notion Linking</string>
     <string name="index_phone_volume_probe_label">Index Volume Up</string>
     <string name="index_phone_volume_probe_description">Lets Index recognize Volume Up gestures for hands-free phone recording.</string>

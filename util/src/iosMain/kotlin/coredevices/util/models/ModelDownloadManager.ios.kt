@@ -81,14 +81,16 @@ actual class ModelDownloadManager {
 
     actual fun downloadSTTModel(
         modelInfo: ModelInfo,
-        allowMetered: Boolean
+        allowMetered: Boolean,
+        userInitiated: Boolean,
     ): Boolean {
         return download(modelInfo, isStt = true, allowMetered)
     }
 
     actual fun downloadLanguageModel(
         modelInfo: ModelInfo,
-        allowMetered: Boolean
+        allowMetered: Boolean,
+        userInitiated: Boolean,
     ): Boolean {
         return download(modelInfo, isStt = false, allowMetered)
     }
