@@ -166,10 +166,12 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
     private fun createNotificationChannel() {
         val channel = NotificationChannelCompat.Builder(
             NOTIFICATION_CHANNEL_ID,
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_MIN,
         )
             .setName("Index phone controls")
             .setDescription("Keeps Volume Up recording ready")
+            .setShowBadge(false)
+            .setVibrationEnabled(false)
             .build()
         NotificationManagerCompat.from(this).createNotificationChannel(channel)
     }
@@ -186,7 +188,7 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
             .setContentText("Hold Volume Up to record")
             .setOngoing(true)
             .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .build()
@@ -221,7 +223,7 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
 
     companion object {
         private const val TAG = "IndexPhoneRecording"
-        private const val NOTIFICATION_CHANNEL_ID = "index_phone_controls"
+        private const val NOTIFICATION_CHANNEL_ID = "index_phone_controls_silent_v2"
         private const val NOTIFICATION_ID = 4102
         private const val ACTION_ARM = "coredevices.coreapp.indexphone.ARM"
         private const val ACTION_START_HOLD_RECORDING =

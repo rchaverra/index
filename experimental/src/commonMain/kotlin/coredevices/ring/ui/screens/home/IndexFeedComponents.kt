@@ -129,6 +129,7 @@ internal fun IndexHeader(
     onQueryChange: (String) -> Unit,
     onStartSearch: () -> Unit,
     onCancelSearch: () -> Unit,
+    showSyncHint: Boolean = true,
     trailingActions: @Composable (RowScope.() -> Unit)? = null,
 ) {
     val colors = IndexTheme.colors
@@ -212,7 +213,11 @@ internal fun IndexHeader(
                     softWrap = false,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 )
-                PulsingSyncHint(modifier = Modifier.weight(1f))
+                if (showSyncHint) {
+                    PulsingSyncHint(modifier = Modifier.weight(1f))
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
             }
             IconButton(onClick = onStartSearch) {
                 Icon(Icons.Default.Search, "Search", tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))

@@ -306,20 +306,32 @@ fun IndexSettings(coreNav: CoreNav) {
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "New to Index 01?",
+                                if (platform.isAndroid) "New to Index Phone Mode?" else "New to Index 01?",
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "It's a new kind of gadget! A quick read goes a long way.",
+                            if (platform.isAndroid) {
+                                "It turns your smartphone into a new kind of gadget! A quick read goes a long way."
+                            } else {
+                                "It's a new kind of gadget! A quick read goes a long way."
+                            },
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Inverted colors so the button stands out on the container card
+                            // Inverted colors so the button stands out on the container card.
                             Button(
-                                onClick = { uriHandler.openUrlSafely("https://pbl.zip/index-guide") },
+                                onClick = {
+                                    uriHandler.openUrlSafely(
+                                        if (platform.isAndroid) {
+                                            "https://github.com/rchaverra/index/blob/index-phone-phase-1/README.md"
+                                        } else {
+                                            "https://pbl.zip/index-guide"
+                                        }
+                                    )
+                                },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.onPrimaryContainer,
                                     contentColor = colors.primaryContainer,
@@ -334,38 +346,38 @@ fun IndexSettings(coreNav: CoreNav) {
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
-                            OutlinedButton(
-                                onClick = {
-                                    uriHandler.openUrlSafely(
-                                        "https://github.com/rchaverra/index/blob/index-phone-phase-1/README.md"
-                                    )
-                                },
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = colors.onPrimaryContainer,
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    colors.onPrimaryContainer.copy(alpha = 0.5f)
-                                ),
-                                modifier = Modifier.height(40.dp),
-                            ) {
-                                Text("FAQ")
+                            if (!platform.isAndroid) {
+                                OutlinedButton(
+                                    onClick = { uriHandler.openUrlSafely("https://pbl.zip/index-faq") },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = colors.onPrimaryContainer,
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        colors.onPrimaryContainer.copy(alpha = 0.5f)
+                                    ),
+                                    modifier = Modifier.height(40.dp),
+                                ) {
+                                    Text("FAQ")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Device card
-            item {
-                IndexDeviceListItem(
-                    headline = when {
-                        ringPaired && currentRing != null -> (currentRing ?: "")
-                        ringPaired -> "Paired to Index 01"
-                        else -> "No Ring Paired"
-                    },
-                    supporting = if (ringPaired) "Paired" else "Not paired",
-                )
+            // The physical-device status is irrelevant in Android phone mode.
+            if (!platform.isAndroid) {
+                item {
+                    IndexDeviceListItem(
+                        headline = when {
+                            ringPaired && currentRing != null -> (currentRing ?: "")
+                            ringPaired -> "Paired to Index 01"
+                            else -> "No Ring Paired"
+                        },
+                        supporting = if (ringPaired) "Paired" else "Not paired",
+                    )
+                }
             }
 
             // --- Button Actions section ---

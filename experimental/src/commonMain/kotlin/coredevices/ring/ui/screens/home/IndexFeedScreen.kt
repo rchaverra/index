@@ -87,6 +87,8 @@ import coredevices.ring.ui.theme.IndexTheme
 import coredevices.ring.ui.viewmodel.IndexFeedViewModel
 import coredevices.util.Permission
 import coredevices.util.PermissionRequester
+import coredevices.util.Platform
+import coredevices.util.isAndroid
 import coredevices.util.rememberUiContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -121,6 +123,7 @@ fun IndexFeedScreen(
     val listState = remember { androidx.compose.foundation.lazy.LazyListState() }
 
     val permissionRequester = koinInject<PermissionRequester>()
+    val platform = koinInject<Platform>()
     val uiContext = rememberUiContext()
     val missingPermissions by permissionRequester.missingPermissions.collectAsStateWithLifecycle()
 
@@ -168,6 +171,7 @@ fun IndexFeedScreen(
             onQueryChange = vm::setQuery,
             onStartSearch = { searching = true },
             onCancelSearch = { searching = false; vm.clearQuery() },
+            showSyncHint = !platform.isAndroid,
             trailingActions = headerActions,
         )
 
