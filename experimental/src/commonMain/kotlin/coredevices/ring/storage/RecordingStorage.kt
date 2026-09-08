@@ -290,6 +290,13 @@ class RealRecordingStorage(
     }
 
     override suspend fun persistRecording(id: String) = withContext(Dispatchers.IO) {
+        // A local recording is already durable in the app cache and is processed independently.
+        // Do not touch Firebase unless the user has both signed in and enabled backup.
+        if (!preferences.backupEnabled.value || Firebase.auth.currentUser == null) {
+            logger.d { "Skipping recording upload: backup is disabled or no user is signed in" }
+            return@withContext
+        }
+
         val encrypt = preferences.useEncryption.value
         val encryptionKey = if (encrypt) documentEncryptor.getKey() else null
         if (encrypt && encryptionKey == null) {

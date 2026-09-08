@@ -60,6 +60,39 @@ class NeedleListRoutingTest {
         println("[needle] model at $modelPath")
     }
 
+    /**
+     * Characterizes the shipped on-device model's bilingual routing behavior. This is deliberately
+     * observational: model weights are an external artifact, and the printed tool names provide a
+     * reproducible device baseline without adding language-specific production fallback rules.
+     */
+    @Test
+    fun bilingualReminderRouting_isReportedForDeviceBaseline() {
+        cactusSetBackend("cpu")
+        val handle = cactusInit(modelPath, null, false)
+        assertTrue(handle != 0L, "cactusInit failed for $modelPath")
+        try {
+            listOf(
+                "Recuérdame llamar al banco mañana a las tres.",
+                "Agrega pan a mi lista de compras.",
+                "Remind me to call the bank tomorrow at three.",
+            ).forEach { input ->
+                val messages = buildJsonArray {
+                    add(buildJsonObject {
+                        put("role", "user")
+                        put("content", input)
+                    })
+                }.toString()
+                val calls = NeedleTestTools.parseCalls(
+                    cactusComplete(handle, messages, NeedleTestTools.OPTIONS_JSON, NeedleTestTools.TOOLS_JSON, null)
+                )
+                println("[needle-bilingual] input=$input tools=${calls.map { it.first }}")
+                assertTrue(calls.isNotEmpty(), "Expected the local model to select a tool for: $input")
+            }
+        } finally {
+            cactusDestroy(handle)
+        }
+    }
+
     @Test
     fun multiItemList_emitsOneWellFormedListItemPerItem() {
         cactusSetBackend("cpu")
