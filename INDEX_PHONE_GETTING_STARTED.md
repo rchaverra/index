@@ -70,6 +70,13 @@ The fork intentionally does not replace the Index data model, transcription engi
 or cloud account rules. That keeps behavior familiar and reduces the work needed to bring future
 upstream updates into this branch.
 
+## Obsidian notes
+
+When **Obsidian** is selected under **Index Agent → Where notes save**, notes are written to the
+vault folder you selected. The default main-note file is **`Index App.md`**. Android can revoke a
+folder grant; if Index says the selected destination did not create a note, reopen Obsidian
+configuration in Index settings, select the vault folder again, and save.
+
 ## Known limitations
 
 - Screen-off Volume Up recording is not supported on the tested Pixel Fold or Motorola Razr+ 2024.

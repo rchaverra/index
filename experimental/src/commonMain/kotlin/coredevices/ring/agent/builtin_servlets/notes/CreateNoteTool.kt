@@ -77,6 +77,12 @@ class CreateNoteTool(private val noteIntegrationFactory: NoteIntegrationFactory)
         return try {
             val noteClient = noteIntegrationFactory.createNoteClient()
             val noteId = noteClient.createNote(text, context.itemSource())
+                ?: return ToolCallResult(
+                    JsonSnake.encodeToString(CreateNoteResult()),
+                    SemanticResult.GenericFailure(
+                        "The selected note destination did not create a note. Reconnect it in Index settings."
+                    )
+                )
             ToolCallResult(
                 JsonSnake.encodeToString(CreateNoteResult(noteId = noteId)),
                 SemanticResult.ListItemCreation(text)
