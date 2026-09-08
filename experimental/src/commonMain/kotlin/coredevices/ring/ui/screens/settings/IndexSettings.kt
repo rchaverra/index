@@ -88,6 +88,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
+import com.russhwolf.settings.Settings
+import com.russhwolf.settings.set
+import coredevices.ring.service.button.INDEX_PHONE_MEDIA_BUTTONS_ENABLED
+import coredevices.ring.service.button.indexPhoneMediaButtonsEnabled
 import coreapp.util.generated.resources.back
 import coreapp.util.generated.resources.settings
 import coredevices.ring.agent.LlmMode
@@ -163,6 +167,8 @@ fun IndexSettings(coreNav: CoreNav) {
     val autoDismissActionNotifications by viewModel.autoDismissActionNotifications.collectAsState()
     val diagnosticsState by viewModel.diagnosticsState.collectAsState()
     val platform = koinInject<Platform>()
+    val settings = koinInject<Settings>()
+    var headsetMediaButtonsEnabled by remember { mutableStateOf(settings.indexPhoneMediaButtonsEnabled()) }
     val coreConfigHolder = koinInject<CoreConfigHolder>()
     val coreConfig by coreConfigHolder.config.collectAsState()
     val modelManager = koinInject<ModelManager>()
@@ -269,15 +275,17 @@ fun IndexSettings(coreNav: CoreNav) {
                 },
                 title = { Text(stringResource(UtilRes.string.settings)) },
                 actions = {
-                    BugReportButton(
-                        coreNav,
-                        pebble = false,
-                        screenContext = mapOf(
-                            "screen" to "Settings",
-                            "llmMode" to llmMode.name,
-                            "username" to (accountUsername ?: "null")
+                    if (!platform.isAndroid) {
+                        BugReportButton(
+                            coreNav,
+                            pebble = false,
+                            screenContext = mapOf(
+                                "screen" to "Settings",
+                                "llmMode" to llmMode.name,
+                                "username" to (accountUsername ?: "null")
+                            )
                         )
-                    )
+                    }
                 }
             )
         }
@@ -326,7 +334,7 @@ fun IndexSettings(coreNav: CoreNav) {
                                 onClick = {
                                     uriHandler.openUrlSafely(
                                         if (platform.isAndroid) {
-                                            "https://github.com/rchaverra/index/blob/index-phone-phase-1/README.md"
+                                            "https://github.com/rchaverra/index/blob/index-phone-phase-1/INDEX_PHONE_GETTING_STARTED.md"
                                         } else {
                                             "https://pbl.zip/index-guide"
                                         }
@@ -509,6 +517,24 @@ fun IndexSettings(coreNav: CoreNav) {
                     Switch(
                         checked = autoDismissActionNotifications,
                         onCheckedChange = { viewModel.toggleAutoDismissActionNotifications() }
+                    )
+                }
+            }
+            if (platform.isAndroid) item {
+                SettingsRow(
+                    title = "Screen-off headset recording",
+                    subtitle = "Use a wired or Bluetooth headset's hold button. Reopen Index after changing this setting.",
+                    onClick = {
+                        headsetMediaButtonsEnabled = !headsetMediaButtonsEnabled
+                        settings[INDEX_PHONE_MEDIA_BUTTONS_ENABLED] = headsetMediaButtonsEnabled
+                    },
+                ) {
+                    Switch(
+                        checked = headsetMediaButtonsEnabled,
+                        onCheckedChange = {
+                            headsetMediaButtonsEnabled = it
+                            settings[INDEX_PHONE_MEDIA_BUTTONS_ENABLED] = it
+                        },
                     )
                 }
             }

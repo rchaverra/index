@@ -150,6 +150,7 @@ class GestureRoutingTest {
         music.forEach {
             assertTrue(it.accepts(GestureDestination.PlayPause))
             assertTrue(it.accepts(GestureDestination.NextTrack))
+            assertTrue(it.accepts(GestureDestination.PreviousTrack))
             assertTrue(it.accepts(GestureDestination.Nothing))
             assertFalse(it.accepts(GestureDestination.IndexAgent))
             assertFalse(it.accepts(GestureDestination.WebSearch))
@@ -164,6 +165,7 @@ class GestureRoutingTest {
             assertTrue(it.accepts(GestureDestination.Nothing))
             assertFalse(it.accepts(GestureDestination.PlayPause))
             assertFalse(it.accepts(GestureDestination.NextTrack))
+            assertFalse(it.accepts(GestureDestination.PreviousTrack))
         }
     }
 
@@ -184,6 +186,7 @@ class GestureRoutingTest {
         val stored = MapSettings()
         routing(stored = stored).apply {
             setRoute(RingGesture.Click, GestureDestination.PlayPause)
+            setRoute(RingGesture.DoubleClick, GestureDestination.PreviousTrack)
             setRoute(RingGesture.Hold, GestureDestination.McpSandbox(42L))
             setRoute(RingGesture.ClickHold, GestureDestination.WebhookOnly)
         }
@@ -192,9 +195,10 @@ class GestureRoutingTest {
         val reloaded = routing(MusicControlMode.Disabled, SecondaryMode.Search, stored = stored)
 
         assertEquals(GestureDestination.PlayPause, reloaded.destinationFor(RingGesture.Click))
+        assertEquals(GestureDestination.PreviousTrack, reloaded.destinationFor(RingGesture.DoubleClick))
         assertEquals(GestureDestination.McpSandbox(42L), reloaded.destinationFor(RingGesture.Hold))
         assertEquals(GestureDestination.WebhookOnly, reloaded.destinationFor(RingGesture.ClickHold))
-        assertEquals(GestureDestination.Nothing, reloaded.destinationFor(RingGesture.DoubleClick))
+        assertEquals(GestureDestination.Nothing, reloaded.destinationFor(RingGesture.TripleClick))
     }
 
     @Test

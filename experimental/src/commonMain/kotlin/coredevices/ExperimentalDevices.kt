@@ -270,11 +270,15 @@ class ExperimentalDevices(
                 coreNav = coreNav,
                 scrollToTop = topBarParams.scrollToTop,
                 headerActions = {
-                    BugReportButton(
-                        coreNav,
-                        pebble = false,
-                        screenContext = mapOf("screen" to "IndexFeed"),
-                    )
+                    // Phone mode is a standalone fork, so do not surface the
+                    // upstream bug-report entry point in its primary UI.
+                    if (!platform.isAndroid) {
+                        BugReportButton(
+                            coreNav,
+                            pebble = false,
+                            screenContext = mapOf("screen" to "IndexFeed"),
+                        )
+                    }
                     if (isDebugEnabled) {
                         IconButton(
                             onClick = { launchWavImportDialog(listOf("audio/*")) },

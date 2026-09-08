@@ -254,13 +254,17 @@ class ListTool: BuiltInMcpTool(
                 userMessage = userMessage,
             )
             val list = integration.searchForList(destinationHint).firstOrNull()
+            val resolvedListId = matchListIdByHint(lists, destinationHint)
+            logger.i {
+                "create_list_item modelHint=${listItemArgs.list_name} " +
+                    "destinationHint=$destinationHint resolvedListId=$resolvedListId"
+            }
             val reminderId = integration.createReminder(
                 listItemArgs.message,
                 instant,
                 listId = list?.id,
                 source = context.itemSource(),
             )
-            val resolvedListId = matchListIdByHint(lists, destinationHint)
             ToolCallResult(
                 JsonSnake.encodeToString(ListAddResult(success = true, id = reminderId)),
                 SemanticResult.ListItemCreation(

@@ -22,11 +22,12 @@ class ButtonSwitchboardTest {
     }
 
     @Test
-    fun musicGesturesOfferPlayPauseNextTrackAndNothing() {
+    fun musicGesturesOfferAllMediaActionsAndNothing() {
         assertEquals(
             listOf(
                 GestureDestination.PlayPause,
                 GestureDestination.NextTrack,
+                GestureDestination.PreviousTrack,
                 GestureDestination.Nothing,
             ),
             destinationsFor(GestureKind.Music, hasSandboxGroups = true),

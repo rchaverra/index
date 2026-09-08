@@ -14,6 +14,7 @@ import coredevices.ring.service.button.GestureKind
 import coredevices.ring.service.button.GestureRoutingPreferences
 import coredevices.ring.service.onNextTrack
 import coredevices.ring.service.onPlayPause
+import coredevices.ring.service.onPreviousTrack
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -128,6 +129,7 @@ class VolumeKeyProbeService : AccessibilityService(), KoinComponent {
                         GestureKind.Music -> when (gestureRouting.destinationFor(signal.gesture)) {
                             GestureDestination.PlayPause -> onPlayPause()
                             GestureDestination.NextTrack -> onNextTrack()
+                            GestureDestination.PreviousTrack -> onPreviousTrack()
                             else -> Unit
                         }
                         GestureKind.Recording -> {

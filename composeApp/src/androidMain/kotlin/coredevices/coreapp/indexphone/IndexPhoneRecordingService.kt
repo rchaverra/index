@@ -16,9 +16,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.russhwolf.settings.Settings
 import coredevices.coreapp.MainActivity
 import coredevices.ring.service.recordings.RecordingProcessingQueue
 import coredevices.ring.service.button.RingGesture
+import coredevices.ring.service.button.indexPhoneMediaButtonsEnabled
 import coredevices.ring.storage.RecordingStorage
 import coredevices.ring.util.AudioRecorder
 import coredevices.util.R
@@ -45,10 +47,13 @@ import kotlin.uuid.Uuid
 class IndexPhoneRecordingService : Service(), KoinComponent {
     private val recordingStorage: RecordingStorage by inject()
     private val recordingQueue: RecordingProcessingQueue by inject()
+    private val gestureRouting by inject<coredevices.ring.service.button.GestureRoutingPreferences>()
+    private val settings: Settings by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
     private var activeSession: RecordingSession? = null
+    private var mediaButtonBridge: IndexPhoneMediaButtonBridge? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -56,10 +61,12 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
         super.onCreate()
         isArmed = true
         createNotificationChannel()
+        refreshMediaButtonBridge()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!enterForeground(startId)) return START_NOT_STICKY
+        refreshMediaButtonBridge()
         when (intent?.action) {
             ACTION_START_HOLD_RECORDING -> startHoldRecording(
                 intent.getStringExtra(EXTRA_BUTTON_SEQUENCE) ?: HOLD_BUTTON_SEQUENCE,
@@ -76,6 +83,8 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
             runBlocking(Dispatchers.IO) { runCatching { recorder.stopRecording() } }
         }
         serviceScope.cancel()
+        mediaButtonBridge?.release()
+        mediaButtonBridge = null
         super.onDestroy()
     }
 
@@ -175,6 +184,17 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
             .build()
         NotificationManagerCompat.from(this).createNotificationChannel(channel)
     }
+
+    private fun refreshMediaButtonBridge() {
+        val enabled = settings.indexPhoneMediaButtonsEnabled()
+        if (enabled && mediaButtonBridge == null) {
+            mediaButtonBridge = IndexPhoneMediaButtonBridge(this, gestureRouting)
+        } else if (!enabled && mediaButtonBridge != null) {
+            mediaButtonBridge?.release()
+            mediaButtonBridge = null
+        }
+    }
+
 
     private fun enterForeground(startId: Int): Boolean {
         val contentIntent = PendingIntent.getActivity(

@@ -1,5 +1,35 @@
 # Pebble Mobile app
 
+## Index Phone fork
+
+This branch adds an Android phone-only mode that runs the existing Index experience without an
+Index 01 ring. It launches directly into the Index feed, creates the standard lists locally, uses
+on-device speech and agent models by default, and maps the phone's Volume Up button to the existing
+configurable Index gestures.
+
+Read the complete [Index Phone Getting Started Guide](INDEX_PHONE_GETTING_STARTED.md).
+
+### Getting started on Android
+
+1. Install and open **Index** once.
+2. Allow microphone access.
+3. Open Android **Accessibility** settings and enable **Index Volume Up**.
+4. Keep the default **Hold & Talk → Index agent** setting, or choose another available action in
+   Index settings.
+5. Hold Volume Up to record, then release it to send the recording through the existing Index
+   processing pipeline.
+
+The public Android accessibility path works while the tested Pixel Fold is awake, including from
+the Home screen, another foreground app, and the awake lock screen. Android did not deliver Volume
+Up events after that device entered screen-off/doze. A quiet foreground-service notification is
+required for reliable background microphone access and may remain visible in Android's notification
+shade or Active apps panel.
+
+The Android application ID is `com.ricardochaverra.index`, so it can coexist with the upstream
+Core Devices app. Cloud-dependent features still require a compatible signed-in backend account;
+local recording, transcription, agent processing, notes, lists, reminders, alarms, and timers work
+without one in the validated phone-mode paths.
+
 Welcome to the official source code for the Pebble mobile app. Download the app from the [iOS Appstore](https://apps.apple.com/us/app/pebble-core/id6743771967) or [Google Play](https://play.google.com/store/apps/details?id=coredevices.coreapp&hl=en_US). The app is entirely open source. 
 
 This app supports ALL Pebble watches, and Pebble Index 01 rings.

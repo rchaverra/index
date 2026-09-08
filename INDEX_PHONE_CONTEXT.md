@@ -4,7 +4,7 @@
 > It is intended to be read by every coding agent before making changes to this fork.
 >
 > **Baseline:** Core Devices `mobileapp`, user fork based on upstream tag `1.11.0.2`.
-> **Current validated state:** Android phone-mode work through Phase 2B, including the local-first bootstrap safety/retry correction and launch-time Koin repair.
+> **Current validated state:** The Android phone-mode milestone is implemented and physically validated on the folded Pixel Fold for awake foreground, background, Home, and lock-screen paths. The known screen-off/doze limitation remains.
 > **Current branch used during development:** `index-phone-phase-1`.
 > **Primary goal:** preserve the existing Index experience while replacing the physical Index 01 button/ring dependency with an Android-phone experience centered on the physical Volume Up button.
 
@@ -770,10 +770,11 @@ fully off/dozing, Android does not deliver the Volume Up events to this public a
 so recording cannot begin in that state. After process death or reinstall, the user must open Index
 once to re-arm the microphone service; reinstall may also require Accessibility to be enabled again.
 
-Android requires the long-lived microphone foreground service to supply a notification. It is kept
-silent and low priority, but cannot be removed in app code without giving up reliable recording from
-Home and the awake lock screen. On Android 13+, the user may block this notification channel to hide
-it from the drawer, while Android can still show Index in the system Active apps surface.
+Android requires the long-lived microphone foreground service to supply a notification. It now uses
+a dedicated silent, non-badging minimum-priority channel. Android may promote a foreground-service
+notification to low importance and may continue to show it in the notification shade or Active apps
+surface; it cannot be removed in app code without giving up reliable recording from Home and the
+awake lock screen.
 
 While unauthenticated, the unchanged downstream pipeline logs failed recording-persistence and
 Firestore-upload attempts after local capture. Those errors did not block local transcription,
@@ -883,7 +884,7 @@ the completed rehearsal and requires its own checkpoint decision.
 | Android 3-button navigation | Bottom Index input remains fully above the native controls; physically validated |
 | Upstream update | Fork-specific changes remain localized |
 
-Automatic Android phone-mode defaults select Local LLM and Local-only speech once, preserve later Settings choices, and sequentially request the speech and local-agent models through the existing Android download manager when absent. Focused host tests and the Android debug build pass; both required models were physically verified on the folded Pixel Fold after automatic scheduling. The Android app is labeled **Index** and uses the independent install ID `com.ricardochaverra.index`, while the internal Kotlin namespace remains stable to reduce upstream conflicts. App-level launcher assets replace the upstream icon without changing shared resources, and the blank Android splash follows the system light/dark appearance. The settings FAQ opens this fork branch's README. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, the duplicate local-model tool-call artifact, and alarm behavior remain unvalidated. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The Motorola Razr+ 2024 remains unvalidated.
+Automatic Android phone-mode defaults select Local LLM and Local-only speech once, preserve later Settings choices, and sequentially request the speech and local-agent models through the existing Android download manager when absent. Focused host tests and the Android debug build pass; both required models were physically verified on the folded Pixel Fold after automatic scheduling. The Android app is labeled **Index** and uses the independent install ID `com.ricardochaverra.index`, while the internal Kotlin namespace remains stable to reduce upstream conflicts. App-level launcher assets replace the upstream icon without changing shared resources, and the blank Android splash follows the system light/dark appearance. Android settings show an Index Phone Mode guide linked to this fork branch's README, hide the FAQ and ring-pairing card, and the Android feed hides the ring sync hint. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, and the duplicate local-model tool-call artifact remain unvalidated. Foreground alarm creation was physically validated without a companion-device association; the same capability gate permits background alarm and timer launches when the app's accessibility service is enabled. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The Motorola Razr+ 2024 remains unvalidated.
 
 ---
 
@@ -985,7 +986,7 @@ Current validated implementation:
 Current known defects/requirements:
 
 - local-model duplicate or hallucinated tool-call artifact after otherwise-correct named-list routing
-- alarm/device-association dependency
+- alarm/device-association dependency — corrected for foreground phone mode and accessibility-enabled background phone mode; foreground alarm creation physically validated
 - Local LLM / Local-only speech defaults and sequential automatic speech/agent model downloads are implemented, host-tested, and physically verified on the folded Pixel Fold
 - WebSearch requires an authenticated cloud account; signed-out routing correctly surfaces login-required
 - recording cloud uploads are gated on both backup enablement and authentication; signed-out local processing remains local
@@ -998,8 +999,8 @@ Current known defects/requirements:
 
 Before changing additional product behavior:
 
-1. Complete the banking-app compatibility comparison with Index Accessibility disabled, then with Developer Options/debugging disabled if needed.
+1. Run a final focused regression pass for launch, local lists, named-list routing, reminders, alarms/timers, and all configured Volume Up gestures.
 2. Preserve the documented Pixel screen-off limitation and validate the Motorola Razr+ 2024 when available.
-3. Keep the remaining issues separate: duplicate local-model tool-call artifact, the phone-only alarm path, and release signing/distribution.
+3. Keep the remaining issues separate: duplicate local-model tool-call artifact, authenticated Firebase synchronization, banking-app compatibility, and release signing/distribution.
 
 The product requirements in Section 1 remain unchanged unless the user explicitly changes them.
