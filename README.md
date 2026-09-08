@@ -19,11 +19,13 @@ Read the complete [Index Phone Getting Started Guide](INDEX_PHONE_GETTING_STARTE
 5. Hold Volume Up to record, then release it to send the recording through the existing Index
    processing pipeline.
 
-The public Android accessibility path works while the tested Pixel Fold is awake, including from
-the Home screen, another foreground app, and the awake lock screen. Android did not deliver Volume
-Up events after that device entered screen-off/doze. A quiet foreground-service notification is
-required for reliable background microphone access and may remain visible in Android's notification
-shade or Active apps panel.
+The public Android accessibility path works while the tested Pixel Fold and Motorola Razr+ 2024
+outer display are awake, including from the Home screen, another foreground app, and the awake lock
+screen. Android did not deliver Volume Up events after either device entered screen-off/doze. The
+optional **Screen-off headset recording** setting provides a disabled-by-default media-button
+fallback, pending physical headset testing. A quiet foreground-service notification is required for
+reliable background microphone access and may remain visible in Android's notification shade or
+Active apps panel.
 
 The Android application ID is `com.ricardochaverra.index`, so it can coexist with the upstream
 Core Devices app. Cloud-dependent features still require a compatible signed-in backend account;

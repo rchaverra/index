@@ -884,7 +884,7 @@ the completed rehearsal and requires its own checkpoint decision.
 | Android 3-button navigation | Bottom Index input remains fully above the native controls; physically validated |
 | Upstream update | Fork-specific changes remain localized |
 
-Automatic Android phone-mode defaults select Local LLM and Local-only speech once, preserve later Settings choices, and sequentially request the speech and local-agent models through the existing Android download manager when absent. Focused host tests and the Android debug build pass; both required models were physically verified on the folded Pixel Fold after automatic scheduling. The Android app is labeled **Index** and uses the independent install ID `com.ricardochaverra.index`, while the internal Kotlin namespace remains stable to reduce upstream conflicts. App-level launcher assets replace the upstream icon without changing shared resources, and the blank Android splash follows the system light/dark appearance. Android settings show an Index Phone Mode guide linked to this fork branch's README, hide the FAQ and ring-pairing card, and the Android feed hides the ring sync hint. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, and the duplicate local-model tool-call artifact remain unvalidated. Foreground alarm creation was physically validated without a companion-device association; the same capability gate permits background alarm and timer launches when the app's accessibility service is enabled. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The Motorola Razr+ 2024 remains unvalidated.
+Automatic Android phone-mode defaults select Local LLM and Local-only speech once, preserve later Settings choices, and sequentially request the speech and local-agent models through the existing Android download manager when absent. Focused host tests and the Android debug build pass; both required models were physically verified on the folded Pixel Fold after automatic scheduling. The Android app is labeled **Index** and uses the independent install ID `com.ricardochaverra.index`, while the internal Kotlin namespace remains stable to reduce upstream conflicts. App-level launcher assets replace the upstream icon without changing shared resources, and the blank Android splash follows the system light/dark appearance. Android settings show an Index Phone Mode guide linked to this fork branch's README, hide the FAQ and ring-pairing card, and the Android feed hides the ring sync hint. Authenticated Firebase synchronization, cloud bootstrap, Firestore transaction behavior, and the duplicate local-model tool-call artifact remain unvalidated. Foreground alarm creation was physically validated without a companion-device association; the same capability gate permits background alarm and timer launches when the app's accessibility service is enabled. Volume Up event delivery, gesture recognition, Hold recording through existing local processing, and Android three-button navigation inset handling are physically validated for the documented awake folded Pixel Fold states. The same awake outer-display Volume Up paths were physically validated on a Motorola Razr+ 2024; screen-off delivery failed there as it did on the Pixel Fold. An optional, disabled-by-default headset media-button bridge is included as a later screen-off fallback, but it has not yet received physical headset validation.
 
 ---
 
@@ -982,6 +982,7 @@ Current validated implementation:
 - full existing gesture routing — physically validated on the awake folded Pixel Fold; stored settings change phone behavior without rebuilding
 - Android 3-button navigation inset correction — physically validated on the folded Pixel Fold
 - upstream merge rehearsal through `f853c91b` — zero conflicts and combined Android debug build passed
+- final phone-mode control checkpoint `f585f8cc` — Android debug build and focused gesture/settings tests passed; includes Previous Track, Full Feed navigation insets, Android bug-report control hiding, the optional headset bridge, and the project guide
 
 Current known defects/requirements:
 
@@ -991,7 +992,8 @@ Current known defects/requirements:
 - WebSearch requires an authenticated cloud account; signed-out routing correctly surfaces login-required
 - recording cloud uploads are gated on both backup enablement and authentication; signed-out local processing remains local
 - screen-off Volume Up events are not delivered by the tested public accessibility path on the folded Pixel Fold
-- Motorola Razr+ 2024 Volume Up behavior remains physically untested until that device is available
+- Motorola Razr+ 2024 awake outer-display Volume Up behavior is physically validated; screen-off event delivery failed through the public accessibility path, matching the Pixel Fold result
+- the optional Screen-off headset recording bridge is included but still needs physical wired and Bluetooth headset validation on the Razr+ 2024
 - authenticated Firebase synchronization and cloud bootstrap remain physically/emulator unverified
 - Banco General still rejected the current debug/sideloaded build with Index Accessibility disabled; release signing, Developer Options/debugging, and trusted distribution remain deferred compatibility variables
 
@@ -1000,7 +1002,7 @@ Current known defects/requirements:
 Before changing additional product behavior:
 
 1. Run a final focused regression pass for launch, local lists, named-list routing, reminders, alarms/timers, and all configured Volume Up gestures.
-2. Preserve the documented Pixel screen-off limitation and validate the Motorola Razr+ 2024 when available.
-3. Keep the remaining issues separate: duplicate local-model tool-call artifact, authenticated Firebase synchronization, banking-app compatibility, and release signing/distribution.
+2. Preserve the documented Pixel and Razr screen-off Volume Up limitation; physically validate the optional wired and Bluetooth headset bridge on the Razr+ 2024 when accessories are available.
+3. Keep the remaining issues separate: duplicate local-model tool-call artifact, authenticated Firebase synchronization, banking-app compatibility, and later release signing/distribution. Personal-use testing continues with the debug build.
 
 The product requirements in Section 1 remain unchanged unless the user explicitly changes them.
