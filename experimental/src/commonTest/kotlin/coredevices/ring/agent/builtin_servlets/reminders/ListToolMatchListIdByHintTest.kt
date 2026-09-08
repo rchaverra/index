@@ -95,7 +95,7 @@ class ListToolMatchListIdByHintTest {
     }
 
     @Test
-    fun reminderWordingOverridesIncorrectShoppingHint() {
+    fun semanticReminderWordingDoesNotOverrideTheModelsToolDestination() {
         listOf(
             "Remind me to call the bank",
             "A reminder, I need to go pick up Illiana's mark.",
@@ -103,7 +103,7 @@ class ListToolMatchListIdByHintTest {
             "Add a reminder, add",
         ).forEach { request ->
             assertEquals(
-                "todo",
+                "shopping",
                 destinationHintForRequest(
                     seededLists,
                     modelHint = "shopping",
@@ -122,6 +122,19 @@ class ListToolMatchListIdByHintTest {
                 seededLists,
                 modelHint = "shopping",
                 userMessage = "Add birthday reminder cards to my Shopping list",
+            ),
+        )
+    }
+
+    @Test
+    fun explicitSpanishCustomTitleOverridesAnIncorrectModelHint() {
+        val lists = seededLists + CachedList(firestoreId = "ideas", title = "Ideas de hoy")
+        assertEquals(
+            "Ideas de hoy",
+            destinationHintForRequest(
+                lists,
+                modelHint = "shopping",
+                userMessage = "Agrega esto a mis Ideas de hoy: llamar a mi mamá.",
             ),
         )
     }

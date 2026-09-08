@@ -77,10 +77,19 @@ vault folder you selected. The default main-note file is **`Index App.md`**. And
 folder grant; if Index says the selected destination did not create a note, reopen Obsidian
 configuration in Index settings, select the vault folder again, and save.
 
+## Lists and languages
+
+You can create a new local list by voice; the request may be in any language the selected local
+model understands. You can also create lists with the **+** button. When adding an item to an
+existing list, say that list's full name. Index preserves an explicitly spoken list name and does
+not use English-only keyword rules to reinterpret reminders or shopping requests.
+
 ## Known limitations
 
 - Screen-off Volume Up recording is not supported on the tested Pixel Fold or Motorola Razr+ 2024.
 - Screen-off headset recording is implemented but not yet physically validated on the Razr+ 2024.
+- The language-neutral list-routing and voice-list-creation change still needs physical bilingual
+  English/Spanish validation with the local models.
 - Local models can occasionally generate an extra or incorrect action. Index records each action in
   the feed so it can be reviewed. If this happens, note the spoken phrase and visible actions before
   reporting it.

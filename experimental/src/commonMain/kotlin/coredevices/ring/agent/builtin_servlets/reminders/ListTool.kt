@@ -95,9 +95,9 @@ class ListTool: BuiltInMcpTool(
         }
 
         /**
-         * Corrects a model-provided destination using only explicit evidence in the original
-         * request. This stays inside list-tool execution: it does not alter transcription or
-         * agent selection, and the model hint remains the fallback when the request is ambiguous.
+         * Corrects a model-provided destination only when the user explicitly said the complete
+         * name of an existing list. This is language-neutral: semantic classification remains
+         * the agent's job, while this layer protects named custom lists from a bad model hint.
          */
         fun destinationHintForRequest(
             lists: List<CachedList>,
@@ -113,16 +113,7 @@ class ListTool: BuiltInMcpTool(
                 .firstOrNull { request.containsWholePhrase(normalizeForPhraseMatch(it.title)) }
                 ?.let { return it.title }
 
-            return when {
-                request.containsWholePhrase("remind me") ||
-                        request.containsWholePhrase("remember to") ||
-                        request.containsWholePhrase("reminder") ||
-                        request.containsWholePhrase("reminders") -> "todo"
-                request.containsWholePhrase("shopping") ||
-                        request.containsWholePhrase("grocery") ||
-                        request.containsWholePhrase("groceries") -> "shopping"
-                else -> modelHint
-            }
+            return modelHint
         }
 
         private fun normalizeForPhraseMatch(value: String): String = value

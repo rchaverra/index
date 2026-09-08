@@ -40,16 +40,10 @@ class CreateListTool : BuiltInMcpTool(
 
     companion object {
         const val TOOL_NAME = "create_list"
-        const val TOOL_DESCRIPTION = "Create a new, empty list. ONLY use this when the user's " +
-                "message contains the exact phrase 'Create a new list', e.g. " +
-                "'Create a new list travel' or 'Create a new list called travel'. " +
-                "Never use it for any other phrasing, and never use it to add items to a list."
+        const val TOOL_DESCRIPTION = "Create a new, empty list when the user explicitly asks to " +
+                "make a list, in the language the user speaks. Never use it merely to add an " +
+                "item to an existing list."
         private val logger = Logger.withTag("CreateListTool")
-
-        private val triggerRegex = Regex("""\bcreate a new list\b""", RegexOption.IGNORE_CASE)
-
-        fun isTriggerPhrase(text: String?): Boolean =
-            text != null && triggerRegex.containsMatchIn(text)
     }
 
     @Serializable
@@ -70,14 +64,6 @@ class CreateListTool : BuiltInMcpTool(
     override suspend fun call(jsonInput: String, context: SessionContext): ToolCallResult {
         val args = runCatching { JsonSnake.decodeFromString<CreateListArgs>(jsonInput) }
             .getOrElse { return failure("Invalid arguments: ${it.message}") }
-        val transcript = runCatching { context.userMessageText.await() }.getOrNull()
-        if (!isTriggerPhrase(transcript)) {
-            logger.w { "Refusing create_list: transcript doesn't start with the trigger phrase" }
-            return failure(
-                "Lists can only be created when the user's message starts with " +
-                        "'Create a new list'. Do not create a list; use another tool."
-            )
-        }
         val title = args.list_name.trim()
         if (title.isEmpty()) {
             return failure("list_name must not be empty")
