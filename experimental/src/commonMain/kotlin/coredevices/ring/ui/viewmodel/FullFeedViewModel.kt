@@ -19,6 +19,7 @@ import coredevices.libindex.database.dao.RingTransferDao
 import coredevices.libindex.di.LibIndexCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -43,8 +44,8 @@ import kotlin.time.Instant
  * assistant side; same labels/glyphs as the home peek card.
  */
 class FullFeedViewModel(
-    recordingRepo: RecordingRepository,
-    itemRepo: ItemRepository,
+    private val recordingRepo: RecordingRepository,
+    private val itemRepo: ItemRepository,
     listRepo: ListRepository,
     private val ringTransferDao: RingTransferDao,
     private val recordingQueue: RecordingProcessingQueue,
@@ -83,6 +84,25 @@ class FullFeedViewModel(
         val msg = text.trim().ifBlank { return }
         viewModelScope.launch {
             recordingQueue.queueTextProcessing(msg)
+        }
+    }
+
+    /** Deletes recordings in one local transaction-like pass. Linked items are optional so the
+     * feed offers the same choice as the existing single-recording delete screen. */
+    fun deleteRecordings(recordingIds: Set<Long>, alsoDeleteItems: Boolean, onComplete: () -> Unit) {
+        if (recordingIds.isEmpty()) return
+        viewModelScope.launch {
+            withContext(NonCancellable) {
+                recordingIds.forEach { recordingId ->
+                    if (alsoDeleteItems) {
+                        val recording = recordingRepo.getRecording(recordingId)
+                        val sourceId = recording?.firestoreId?.takeIf { it.isNotBlank() } ?: "local:$recordingId"
+                        itemRepo.getByRecording(sourceId).forEach { itemRepo.softDelete(it.firestoreId) }
+                    }
+                    recordingRepo.deleteRecording(recordingId)
+                }
+            }
+            onComplete()
         }
     }
 

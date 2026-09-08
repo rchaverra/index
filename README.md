@@ -28,7 +28,8 @@ reliable background microphone access and may remain visible in Android's notifi
 Active apps panel.
 
 The Android application ID is `com.ricardochaverra.index`, so it can coexist with the upstream
-Core Devices app. Cloud-dependent features still require a compatible signed-in backend account;
+Core Devices app. In **Index feed → See all**, long-press a transcript to select multiple recordings
+for deletion, with a choice to retain or remove linked notes and tasks. Cloud-dependent features still require a compatible signed-in backend account;
 local recording, transcription, agent processing, notes, lists, reminders, alarms, and timers work
 without one in the validated phone-mode paths.
 

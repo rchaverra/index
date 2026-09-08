@@ -984,7 +984,8 @@ Current validated implementation:
 - upstream merge rehearsal through `f853c91b` — zero conflicts and combined Android debug build passed
 - final phone-mode control checkpoint `f585f8cc` — Android debug build and focused gesture/settings tests passed; includes Previous Track, Full Feed navigation insets, Android bug-report control hiding, the optional headset bridge, and the project guide
 - latest follow-up — Click can now select Increase volume, which raises Android media volume by one system step and was physically validated on the Razr+ 2024; Obsidian main-note output defaults to `Index App.md`, and Obsidian routing was physically validated after reconnecting the selected Android vault
-- language-neutral routing follow-up — removed fork-added English-only reminder/shopping overrides from `ListTool`; explicit complete list-title matching remains, and `create_list` now relies on the agent's language-aware tool selection instead of an exact English transcript phrase. Host tests and Android debug build pass; physical bilingual validation is pending.
+- language-neutral routing follow-up — removed fork-added English-only reminder/shopping overrides from `ListTool`; explicit complete list-title matching remains. The on-device model does not reliably select `create_list` in English or Spanish, so custom lists remain a manual **+** action.
+- batch recording deletion — long-press a transcript in Full Feed to enter checkmark selection mode, choose multiple recordings, then delete recordings alone or together with their linked items. Physically validated on-device.
 
 Current known defects/requirements:
 
@@ -997,7 +998,7 @@ Current known defects/requirements:
 - Motorola Razr+ 2024 awake outer-display Volume Up behavior is physically validated; screen-off event delivery failed through the public accessibility path, matching the Pixel Fold result
 - the optional Screen-off headset recording bridge is included but still needs physical wired and Bluetooth headset validation on the Razr+ 2024
 - Obsidian routing requires Android Storage Access Framework permission for the selected vault; reconnect the vault in Index settings if its permission is revoked or the app reports that no note was created
-- Spanish/English reminder, named-list, shopping, and voice-list-creation regression coverage is pending on the physical Razr+ 2024 with the local models
+- Spanish/English reminder, named-list, and shopping regression coverage is pending on the physical Razr+ 2024 with the local models; voice-list creation is not reliable with the current on-device model
 - authenticated Firebase synchronization and cloud bootstrap remain physically/emulator unverified
 - Banco General still rejected the current debug/sideloaded build with Index Accessibility disabled; release signing, Developer Options/debugging, and trusted distribution remain deferred compatibility variables
 

@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,12 +41,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -131,6 +136,14 @@ fun FullFeed(coreNav: CoreNav) {
     val timestampRevealState = remember { RecordingTimestampRevealState() }
     var preSearchIndex by rememberSaveable { mutableIntStateOf(0) }
     var preSearchOffset by rememberSaveable { mutableIntStateOf(0) }
+    var selectedRecordingIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var showBatchDeleteDialog by remember { mutableStateOf(false) }
+    val selectionMode = selectedRecordingIds.isNotEmpty()
+    fun toggleSelection(id: Long) {
+        selectedRecordingIds = selectedRecordingIds.let { selected ->
+            if (id in selected) selected - id else selected + id
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -152,11 +165,17 @@ fun FullFeed(coreNav: CoreNav) {
                 },
             )
         } else {
-            FullFeedTopBar(coreNav = coreNav, onSearch = {
-                preSearchIndex = listState.firstVisibleItemIndex
-                preSearchOffset = listState.firstVisibleItemScrollOffset
-                searching = true
-            })
+            FullFeedTopBar(
+                coreNav = coreNav,
+                selectedCount = selectedRecordingIds.size,
+                onClearSelection = { selectedRecordingIds = emptySet() },
+                onDeleteSelected = { showBatchDeleteDialog = true },
+                onSearch = {
+                    preSearchIndex = listState.firstVisibleItemIndex
+                    preSearchOffset = listState.firstVisibleItemScrollOffset
+                    searching = true
+                },
+            )
         }
 
         // ONE-SHOT auto-scroll-to-bottom: fires the first time the
@@ -217,6 +236,10 @@ fun FullFeed(coreNav: CoreNav) {
                             chips = entry.chips,
                             actionError = entry.actionError,
                             timestampRevealState = timestampRevealState,
+                            selectionMode = selectionMode,
+                            selected = entry.recording.id in selectedRecordingIds,
+                            onToggleSelection = { toggleSelection(entry.recording.id) },
+                            onStartSelection = { selectedRecordingIds = selectedRecordingIds + entry.recording.id },
                             onOpenRecording = { coreNav.navigateTo(RingRoutes.RecordingDetails(entry.recording.id)) },
                             onRetryRecording = { retryEntry ->
                                 vm.retryRecording(entry.recording.id, retryEntry)
@@ -245,6 +268,31 @@ fun FullFeed(coreNav: CoreNav) {
         // The shell screen owns its own compose bar (HomeFeed renders it
         // inline). Full feed mirrors that — the bottom NavigationBar is
         // provided by the chrome on top of this column.
+        if (showBatchDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showBatchDeleteDialog = false },
+                title = { Text("Delete ${selectedRecordingIds.size} recording${if (selectedRecordingIds.size == 1) "" else "s"}?") },
+                text = { Text("Choose whether to keep or delete the notes and tasks created from these recordings.") },
+                dismissButton = {
+                    TextButton(onClick = { showBatchDeleteDialog = false }) { Text("Cancel") }
+                },
+                confirmButton = {
+                    Row {
+                        TextButton(onClick = {
+                            val ids = selectedRecordingIds
+                            showBatchDeleteDialog = false
+                            vm.deleteRecordings(ids, alsoDeleteItems = false) { selectedRecordingIds = emptySet() }
+                        }) { Text("Recordings only") }
+                        TextButton(onClick = {
+                            val ids = selectedRecordingIds
+                            showBatchDeleteDialog = false
+                            vm.deleteRecordings(ids, alsoDeleteItems = true) { selectedRecordingIds = emptySet() }
+                        }) { Text("Recordings and notes") }
+                    }
+                },
+            )
+        }
+
         IndexComposeBarHost(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp),
             onTextSubmit = vm::submitText,
@@ -255,7 +303,13 @@ fun FullFeed(coreNav: CoreNav) {
 // ── Top bar ────────────────────────────────────────────────────────────
 
 @Composable
-private fun FullFeedTopBar(coreNav: CoreNav, onSearch: () -> Unit) {
+private fun FullFeedTopBar(
+    coreNav: CoreNav,
+    selectedCount: Int,
+    onClearSelection: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    onSearch: () -> Unit,
+) {
     val colors = IndexTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
@@ -265,14 +319,23 @@ private fun FullFeedTopBar(coreNav: CoreNav, onSearch: () -> Unit) {
             Icon(Icons.AutoMirrored.Default.ArrowBack, "Back", tint = colors.onSurface)
         }
         Text(
-            "Index feed",
+            if (selectedCount > 0) "$selectedCount selected" else "Index feed",
             color = colors.onSurface,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
         )
-        IconButton(onClick = onSearch) {
-            Icon(Icons.Default.Search, "Search", tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        if (selectedCount > 0) {
+            IconButton(onClick = onDeleteSelected) {
+                Icon(Icons.Default.Delete, "Delete selected", tint = colors.error, modifier = Modifier.size(20.dp))
+            }
+            IconButton(onClick = onClearSelection) {
+                Icon(Icons.Default.Close, "Clear selection", tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
+        } else {
+            IconButton(onClick = onSearch) {
+                Icon(Icons.Default.Search, "Search", tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
         }
     }
 }
@@ -377,6 +440,10 @@ private fun ImessageRecordingRow(
     chips: List<FullFeedViewModel.Chip>,
     actionError: String?,
     timestampRevealState: RecordingTimestampRevealState,
+    selectionMode: Boolean,
+    selected: Boolean,
+    onToggleSelection: () -> Unit,
+    onStartSelection: () -> Unit,
     onOpenRecording: () -> Unit,
     onRetryRecording: (coredevices.indexai.data.entity.RecordingEntryEntity) -> Unit,
     onOpenObject: (String) -> Unit,
@@ -385,8 +452,14 @@ private fun ImessageRecordingRow(
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
         // 1. User transcription bubble first — right-aligned, red, white text.
-        SwipeRevealRecordingBubble(
-            text = transcription.takeIf { it.isNotBlank() }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (selectionMode) {
+                Checkbox(checked = selected, onCheckedChange = { onToggleSelection() })
+                Spacer(Modifier.width(4.dp))
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                SwipeRevealRecordingBubble(
+                    text = transcription.takeIf { it.isNotBlank() }
                 ?: recording.assistantTitle?.takeIf { it.isNotBlank() }
                 ?: if (retryEntry?.errorType == RecordingEntryErrorType.no_speech) {
                     "No speech detected"
@@ -395,9 +468,14 @@ private fun ImessageRecordingRow(
                 },
             timestamp = recording.localTimestamp,
             revealState = timestampRevealState,
-            onOpenRecording = onOpenRecording,
-            onRetry = retryEntry?.let { entry -> { onRetryRecording(entry) } },
-        )
+                    selectionMode = selectionMode,
+                    onToggleSelection = onToggleSelection,
+                    onStartSelection = onStartSelection,
+                    onOpenRecording = onOpenRecording,
+                    onRetry = retryEntry?.let { entry -> { onRetryRecording(entry) } },
+                )
+            }
+        }
 
         // 2. Assistant action chips below the user bubble (matches prototype).
         if (chips.isNotEmpty()) {
@@ -502,6 +580,9 @@ private fun SwipeRevealRecordingBubble(
     text: String,
     timestamp: Instant,
     revealState: RecordingTimestampRevealState,
+    selectionMode: Boolean,
+    onToggleSelection: () -> Unit,
+    onStartSelection: () -> Unit,
     onOpenRecording: () -> Unit,
     onRetry: (() -> Unit)?,
 ) {
@@ -558,7 +639,10 @@ private fun SwipeRevealRecordingBubble(
                 .offset { IntOffset(animatedOffsetPx.roundToInt(), 0) }
                 .clip(RoundedCornerShape(20.dp, 20.dp, 5.dp, 20.dp))
                 .background(colors.primary)
-                .clickable { onOpenRecording() }
+                .combinedClickable(
+                    onClick = { if (selectionMode) onToggleSelection() else onOpenRecording() },
+                    onLongClick = onStartSelection,
+                )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             Row(
