@@ -23,7 +23,7 @@ sealed interface ObsidianWrite {
  */
 object ObsidianNoteFormatter {
 
-    const val MAIN_NOTE_NAME = "Pebble Index.md"
+    const val MAIN_NOTE_NAME = "Index App.md"
 
     fun plan(config: ObsidianConfig, content: String, year: Int, month: Int, day: Int, hour: Int, minute: Int): ObsidianWrite {
         val date = "$year-${pad2(month)}-${pad2(day)}"

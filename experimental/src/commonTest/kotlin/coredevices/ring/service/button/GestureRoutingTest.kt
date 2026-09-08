@@ -151,6 +151,7 @@ class GestureRoutingTest {
             assertTrue(it.accepts(GestureDestination.PlayPause))
             assertTrue(it.accepts(GestureDestination.NextTrack))
             assertTrue(it.accepts(GestureDestination.PreviousTrack))
+            assertEquals(it == RingGesture.Click, it.accepts(GestureDestination.IncreaseVolume))
             assertTrue(it.accepts(GestureDestination.Nothing))
             assertFalse(it.accepts(GestureDestination.IndexAgent))
             assertFalse(it.accepts(GestureDestination.WebSearch))
@@ -166,6 +167,7 @@ class GestureRoutingTest {
             assertFalse(it.accepts(GestureDestination.PlayPause))
             assertFalse(it.accepts(GestureDestination.NextTrack))
             assertFalse(it.accepts(GestureDestination.PreviousTrack))
+            assertFalse(it.accepts(GestureDestination.IncreaseVolume))
         }
     }
 

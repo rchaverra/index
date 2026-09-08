@@ -15,23 +15,28 @@ class ButtonSwitchboardTest {
     @Test
     fun everyOfferedDestinationIsValidForTheGesture() {
         RingGesture.entries.forEach { gesture ->
-            destinationsFor(gesture.kind, hasSandboxGroups = true).forEach { destination ->
+            destinationsFor(gesture, hasSandboxGroups = true).forEach { destination ->
                 assertTrue(gesture.accepts(destination), "$gesture rejects $destination")
             }
         }
     }
 
     @Test
-    fun musicGesturesOfferAllMediaActionsAndNothing() {
+    fun onlySingleClickOffersIncreaseVolume() {
         assertEquals(
             listOf(
                 GestureDestination.PlayPause,
                 GestureDestination.NextTrack,
                 GestureDestination.PreviousTrack,
+                GestureDestination.IncreaseVolume,
                 GestureDestination.Nothing,
             ),
-            destinationsFor(GestureKind.Music, hasSandboxGroups = true),
+            destinationsFor(RingGesture.Click, hasSandboxGroups = true),
         )
+        assertFalse(destinationsFor(RingGesture.DoubleClick, hasSandboxGroups = true)
+            .contains(GestureDestination.IncreaseVolume))
+        assertFalse(destinationsFor(RingGesture.TripleClick, hasSandboxGroups = true)
+            .contains(GestureDestination.IncreaseVolume))
     }
 
     @Test
@@ -44,10 +49,10 @@ class ButtonSwitchboardTest {
                 GestureDestination.McpSandbox(null),
                 GestureDestination.Nothing,
             ),
-            destinationsFor(GestureKind.Recording, hasSandboxGroups = true),
+            destinationsFor(RingGesture.Hold, hasSandboxGroups = true),
         )
         assertFalse(
-            destinationsFor(GestureKind.Recording, hasSandboxGroups = false)
+            destinationsFor(RingGesture.Hold, hasSandboxGroups = false)
                 .any { it is GestureDestination.McpSandbox }
         )
     }
@@ -75,7 +80,7 @@ class ButtonSwitchboardTest {
     @Test
     fun everyRecordingRouteButNothingLeavesAWebhookRowToTap() {
         RingGesture.entries.filter { it.kind == GestureKind.Recording }.forEach { gesture ->
-            destinationsFor(GestureKind.Recording, hasSandboxGroups = true)
+            destinationsFor(gesture, hasSandboxGroups = true)
                 .filter { it != GestureDestination.Nothing }
                 .forEach {
                     assertTrue(gestureSheetStaysOpenFor(gesture, it), "$gesture / $it closes early")
@@ -87,7 +92,7 @@ class ButtonSwitchboardTest {
     @Test
     fun aMusicChoiceIsTheWholeInteraction() {
         RingGesture.entries.filter { it.kind == GestureKind.Music }.forEach { gesture ->
-            destinationsFor(GestureKind.Music, hasSandboxGroups = true).forEach {
+            destinationsFor(gesture, hasSandboxGroups = true).forEach {
                 assertFalse(gestureSheetStaysOpenFor(gesture, it), "$gesture / $it stays open")
             }
         }
@@ -95,7 +100,7 @@ class ButtonSwitchboardTest {
 
     @Test
     fun everyDestinationHasATileLabel() {
-        GestureKind.entries
+        RingGesture.entries
             .flatMap { destinationsFor(it, hasSandboxGroups = true) }
             .forEach { assertTrue(it.tileLabel.isNotBlank(), "$it has no tile label") }
     }

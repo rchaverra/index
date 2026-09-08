@@ -23,7 +23,9 @@ the original app: audio is stored locally, transcribed, and routed to the select
 
 The configurable gesture choices are:
 
-- Click, Double click, and Triple click: Nothing, Play/Pause, Next track, or Previous track.
+- Click: Nothing, Play/Pause, Next track, Previous track, or Increase volume. Increase volume
+  raises media volume one standard Android step each time.
+- Double click and Triple click: Nothing, Play/Pause, Next track, or Previous track.
 - Hold & Talk and Double click & hold: Index agent, Web Search, webhook, MCP sandbox when configured,
   or Nothing.
 

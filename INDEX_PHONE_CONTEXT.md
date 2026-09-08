@@ -983,6 +983,7 @@ Current validated implementation:
 - Android 3-button navigation inset correction — physically validated on the folded Pixel Fold
 - upstream merge rehearsal through `f853c91b` — zero conflicts and combined Android debug build passed
 - final phone-mode control checkpoint `f585f8cc` — Android debug build and focused gesture/settings tests passed; includes Previous Track, Full Feed navigation insets, Android bug-report control hiding, the optional headset bridge, and the project guide
+- latest follow-up — Click can now select Increase volume, which raises Android media volume by one system step; Obsidian main-note output defaults to `Index App.md`
 
 Current known defects/requirements:
 

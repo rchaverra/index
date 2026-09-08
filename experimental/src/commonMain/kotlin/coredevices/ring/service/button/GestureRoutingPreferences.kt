@@ -65,6 +65,7 @@ private fun GestureDestination.encode(): String = when (this) {
     GestureDestination.PlayPause -> "play_pause"
     GestureDestination.NextTrack -> "next_track"
     GestureDestination.PreviousTrack -> "previous_track"
+    GestureDestination.IncreaseVolume -> "increase_volume"
     GestureDestination.IndexAgent -> "index_agent"
     GestureDestination.WebSearch -> "web_search"
     GestureDestination.WebhookOnly -> "webhook_only"
@@ -78,6 +79,7 @@ private fun decodeDestination(raw: String): GestureDestination? = when {
     raw == "play_pause" -> GestureDestination.PlayPause
     raw == "next_track" -> GestureDestination.NextTrack
     raw == "previous_track" -> GestureDestination.PreviousTrack
+    raw == "increase_volume" -> GestureDestination.IncreaseVolume
     raw == "index_agent" -> GestureDestination.IndexAgent
     raw == "web_search" -> GestureDestination.WebSearch
     raw == "webhook_only" -> GestureDestination.WebhookOnly

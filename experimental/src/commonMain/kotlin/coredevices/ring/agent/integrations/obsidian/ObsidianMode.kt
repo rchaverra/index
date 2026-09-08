@@ -2,7 +2,7 @@ package coredevices.ring.agent.integrations.obsidian
 
 /** Where each note is written inside the chosen vault folder. */
 enum class ObsidianMode(val id: Int) {
-    /** Append every note to a single "Pebble Index.md" note in the vault root. */
+    /** Append every note to a single "Index App.md" note in the vault root. */
     MAIN_NOTE(0),
     /** Append every note to an existing note the user picked from the vault. */
     NAMED_NOTE(1),

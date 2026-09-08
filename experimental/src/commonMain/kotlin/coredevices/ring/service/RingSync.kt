@@ -83,6 +83,7 @@ private fun ShortArray.toByteArrayLe(): ByteArray {
 expect fun onPlayPause()
 expect fun onNextTrack()
 expect fun onPreviousTrack()
+expect fun onIncreaseVolume()
 
 sealed interface RingEvent {
     val ringId: String

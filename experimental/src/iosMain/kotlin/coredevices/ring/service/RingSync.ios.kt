@@ -14,3 +14,7 @@ actual fun onNextTrack() {
 actual fun onPreviousTrack() {
     //no-op
 }
+
+actual fun onIncreaseVolume() {
+    // Android phone-mode action; iOS button controls are disabled.
+}

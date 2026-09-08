@@ -71,3 +71,13 @@ actual fun onPreviousTrack() {
     audioManager.dispatchMediaKeyEvent(downEvent)
     audioManager.dispatchMediaKeyEvent(upEvent)
 }
+
+actual fun onIncreaseVolume() {
+    val context: Context = KoinPlatform.getKoin().get()
+    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+    audioManager.adjustStreamVolume(
+        android.media.AudioManager.STREAM_MUSIC,
+        android.media.AudioManager.ADJUST_RAISE,
+        android.media.AudioManager.FLAG_SHOW_UI,
+    )
+}

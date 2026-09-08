@@ -24,6 +24,7 @@ class IndexButtonActionHandler(
                 GestureDestination.PlayPause -> onPlayPause()
                 GestureDestination.NextTrack -> onNextTrack()
                 GestureDestination.PreviousTrack -> onPreviousTrack()
+                GestureDestination.IncreaseVolume -> onIncreaseVolume()
                 else -> return@collect
             }
             logger.i("Handled button action for sequence: ${buttonPresses.joinToString(", ") { it.name }}")

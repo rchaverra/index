@@ -28,6 +28,7 @@ sealed interface GestureDestination {
     data object PlayPause : Music
     data object NextTrack : Music
     data object PreviousTrack : Music
+    data object IncreaseVolume : Music
     data object IndexAgent : Recording
     data object WebSearch : Recording
     data class McpSandbox(val groupId: Long?) : Recording
@@ -36,7 +37,8 @@ sealed interface GestureDestination {
 }
 
 fun RingGesture.accepts(destination: GestureDestination): Boolean = when (kind) {
-    GestureKind.Music -> destination is GestureDestination.Music
+    GestureKind.Music -> destination is GestureDestination.Music &&
+        (destination != GestureDestination.IncreaseVolume || this == RingGesture.Click)
     GestureKind.Recording -> destination is GestureDestination.Recording
 }
 

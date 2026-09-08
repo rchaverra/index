@@ -11,6 +11,7 @@ import coredevices.ring.service.button.GestureRoutingPreferences
 import coredevices.ring.service.onNextTrack
 import coredevices.ring.service.onPlayPause
 import coredevices.ring.service.onPreviousTrack
+import coredevices.ring.service.onIncreaseVolume
 
 /** Routes one physical button stream through existing Index gesture settings. */
 class PhoneGestureDispatcher(
@@ -58,6 +59,7 @@ class PhoneGestureDispatcher(
                     GestureDestination.PlayPause -> onPlayPause()
                     GestureDestination.NextTrack -> onNextTrack()
                     GestureDestination.PreviousTrack -> onPreviousTrack()
+                    GestureDestination.IncreaseVolume -> onIncreaseVolume()
                     else -> Unit
                 }
                 GestureKind.Recording -> {

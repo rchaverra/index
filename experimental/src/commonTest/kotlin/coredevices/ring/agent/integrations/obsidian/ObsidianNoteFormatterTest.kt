@@ -77,7 +77,7 @@ class ObsidianNoteFormatterTest {
         val write = ObsidianNoteFormatter.plan(cfg, "note text", y, mo, d, h, mi)
         assertTrue(write is ObsidianWrite.Append)
         write as ObsidianWrite.Append
-        assertEquals("Pebble Index.md", write.fileName)
+        assertEquals("Index App.md", write.fileName)
         assertEquals("## 2026-06-18 14:05\n\nnote text\n", write.block)
     }
 
