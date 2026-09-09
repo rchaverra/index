@@ -10,6 +10,9 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -114,6 +117,7 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
                 session.recorder.use { recorder ->
                     val source = recorder.startRecording()
                     session.started.complete(Unit)
+                    signalRecordingStarted()
                     Log.i(TAG, "Volume Up hold recording started fileId=${session.fileId}")
                     val sink = recordingStorage.openOriginalRecordingSink(
                         session.fileId,
@@ -145,6 +149,7 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
             try {
                 session.started.await()
                 session.recorder.stopRecording()
+                signalRecordingStopped()
                 session.writerJob?.join()
 
                 val (source, info) = recordingStorage.openRecordingSource(
@@ -169,6 +174,25 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
             } finally {
                 if (activeSession === session) activeSession = null
             }
+        }
+    }
+
+    private fun signalRecordingStarted() = vibrate(START_RECORDING_PATTERN)
+
+    private fun signalRecordingStopped() = vibrate(STOP_RECORDING_PATTERN)
+
+    @Suppress("DEPRECATION")
+    private fun vibrate(pattern: LongArray) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            getSystemService(VibratorManager::class.java).defaultVibrator
+        } else {
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+        if (!vibrator.hasVibrator()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+        } else {
+            vibrator.vibrate(pattern, -1)
         }
     }
 
@@ -253,6 +277,9 @@ class IndexPhoneRecordingService : Service(), KoinComponent {
         private const val EXTRA_BUTTON_SEQUENCE = "button_sequence"
         private const val RAW_AUDIO_MIME = "audio/raw"
         private const val HOLD_BUTTON_SEQUENCE = "long"
+        // The first pulse confirms capture started; the separated pair confirms release stopped it.
+        private val START_RECORDING_PATTERN = longArrayOf(0, 70)
+        private val STOP_RECORDING_PATTERN = longArrayOf(0, 35, 45, 35)
 
         @Volatile
         private var isArmed = false
